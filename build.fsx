@@ -74,6 +74,27 @@ Target.create
     |> dotnet "fantomas"
   )
 
+Target.create
+  "Publish"
+  (fun _ ->
+    "src/WraindropBot/WraindropBot.fsproj"
+    |> DotNet.publish (fun p ->
+      let runtime = "linux-x64"
+
+      { p with
+          Runtime = Some runtime
+          Configuration = DotNet.BuildConfiguration.Release
+          SelfContained = Some true
+          MSBuildParams =
+            { p.MSBuildParams with
+                Properties =
+                  ("PublishSingleFile", "true")
+                  :: ("PublishTrimmed", "true")
+                     :: p.MSBuildParams.Properties }
+          OutputPath = $"publish/%s{runtime}" |> Some }
+    )
+  )
+
 Target.create "All" ignore
 
 "Clean" ==> "Build" ==> "All"

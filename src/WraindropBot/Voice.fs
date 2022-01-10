@@ -33,7 +33,10 @@ let textToVoice (text: string) (outStream: VoiceTransmitSink) =
       }
 
     let reader =
-      task { do! ffmpeg.StandardOutput.BaseStream.CopyToAsync(outStream) }
+      task {
+        do! ffmpeg.StandardOutput.BaseStream.CopyToAsync(outStream)
+        ffmpeg.StandardOutput.Close()
+      }
 
     let! _ = Task.WhenAll(writer, reader)
     ()
