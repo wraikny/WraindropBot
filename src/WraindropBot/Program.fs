@@ -29,13 +29,14 @@ module Program =
             CommandsNextConfiguration(EnableMentionPrefix = true, StringPrefixes = [ wdConfig.commandPrefix ])
 
           let commands = client.UseCommandsNext(commandsConfig)
-          commands.SetHelpFormatter<WDHelpFormatter>();
+          commands.SetHelpFormatter<WDHelpFormatter>()
           commands.RegisterCommands<WDCommands>()
 
           let voice = client.UseVoiceNext()
 
           client.add_MessageCreated (fun client args ->
             let conn = voice.GetConnection(args.Guild)
+
             if isNull conn |> not then
               Voice.convertMessage wdConfig args
               |> Option.iter (fun msg ->

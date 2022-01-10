@@ -47,11 +47,12 @@ let convertMessage (wdConfig: WDConfig) (args: MessageCreateEventArgs) =
   let msg = args.Message.Content
   let author = args.Author
 
-  if
-    args.Author.IsCurrent || args.Author.IsBot
-    || msg.StartsWith(wdConfig.commandPrefix)
-    || (args.MentionedUsers.Count <> 0 && args.MentionedUsers |> Seq.forall (fun x -> x.IsBot))
-  then
+  if args.Author.IsCurrent
+     || args.Author.IsBot
+     || msg.StartsWith(wdConfig.commandPrefix)
+     || (args.MentionedUsers.Count <> 0
+         && args.MentionedUsers
+            |> Seq.forall (fun x -> x.IsBot)) then
     None
   else
     let name = author.Username
@@ -59,14 +60,17 @@ let convertMessage (wdConfig: WDConfig) (args: MessageCreateEventArgs) =
     let msgBuilder = Text.StringBuilder(msg)
 
     for role in args.MentionedRoles do
-      msgBuilder.Replace($"<@&%d{role.Id}>", role.Name) |> ignore
-    
+      msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
+      |> ignore
+
     for ch in args.MentionedChannels do
-      msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}") |> ignore
-    
+      msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
+      |> ignore
+
     for user in args.MentionedUsers do
-      msgBuilder.Replace($"<@!%d{user.Id}>", $"@%s{user.Username}") |> ignore
-    
+      msgBuilder.Replace($"<@!%d{user.Id}>", $"@%s{user.Username}")
+      |> ignore
+
     Some $"%s{name}, %s{msgBuilder.ToString()}"
 
 
