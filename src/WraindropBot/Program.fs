@@ -14,7 +14,7 @@ module Program =
       try
         match Array.tryHead args with
         | None ->
-          printfn "Set config path as an args[0]."
+          printfn "Set config path to args[0]."
           return 1
 
         | Some path ->
@@ -26,19 +26,22 @@ module Program =
           use client = new DiscordClient(discordConfig)
 
           let commandsConfig =
-            CommandsNextConfiguration(EnableMentionPrefix = true, StringPrefixes = [ wdConfig.command ])
+            CommandsNextConfiguration(EnableMentionPrefix = true, StringPrefixes = [ wdConfig.commandPrefix ])
 
           let commands = client.UseCommandsNext(commandsConfig)
+          commands.SetHelpFormatter<WDHelpFormatter>();
           commands.RegisterCommands<WDCommands>()
 
           let voice = client.UseVoiceNext()
 
           client.add_MessageCreated (fun client args ->
-            Voice.convertMessage wdConfig args
-            |> Option.iter (fun msg ->
-              Task.Run(fun () -> Voice.speak voice args msg)
-              |> ignore
-            )
+            let conn = voice.GetConnection(args.Guild)
+            if isNull conn |> not then
+              Voice.convertMessage wdConfig args
+              |> Option.iter (fun msg ->
+                Task.Run(fun () -> Voice.speak conn args msg)
+                |> ignore
+              )
 
             Task.CompletedTask
           )

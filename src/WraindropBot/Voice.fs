@@ -39,7 +39,7 @@ let textToVoice (text: string) (outStream: VoiceTransmitSink) =
     ()
   }
 
-open DSharpPlus
+open System
 open DSharpPlus.EventArgs
 
 
@@ -49,41 +49,50 @@ let convertMessage (wdConfig: WDConfig) (args: MessageCreateEventArgs) =
 
   if
     args.Author.IsCurrent || args.Author.IsBot
-    || msg.StartsWith(wdConfig.command)
+    || msg.StartsWith(wdConfig.commandPrefix)
+    || (args.MentionedUsers.Count <> 0 && args.MentionedUsers |> Seq.forall (fun x -> x.IsBot))
   then
     None
   else
     let name = author.Username
-    Some $"%s{name}, %s{msg}"
+
+    let msgBuilder = Text.StringBuilder(msg)
+
+    for role in args.MentionedRoles do
+      msgBuilder.Replace($"<@&%d{role.Id}>", role.Name) |> ignore
+    
+    for ch in args.MentionedChannels do
+      msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}") |> ignore
+    
+    for user in args.MentionedUsers do
+      msgBuilder.Replace($"<@!%d{user.Id}>", $"@%s{user.Username}") |> ignore
+    
+    Some $"%s{name}, %s{msgBuilder.ToString()}"
 
 
-let speak (voice: VoiceNextExtension) (args: MessageCreateEventArgs) (msg: string) =
+let speak (conn: VoiceNextConnection) (args: MessageCreateEventArgs) (msg: string) =
   Utils.handleError
     args.Message.RespondAsync
     (fun () ->
       task {
-        let conn = voice.GetConnection(args.Guild)
+        while conn.IsPlaying do
+          do! conn.WaitForPlaybackFinishAsync()
 
-        if isNull conn then
+#if DEBUG
+        Utils.logfn "Speak '%s'" msg
+#endif
+        try
+          let txStream = conn.GetTransmitSink()
+          do! textToVoice msg txStream
+          do! conn.SendSpeakingAsync(true)
+          do! txStream.FlushAsync()
+          do! conn.WaitForPlaybackFinishAsync()
+          do! conn.SendSpeakingAsync(false)
           return Ok()
-
-        else
-          while conn.IsPlaying do
-            do! conn.WaitForPlaybackFinishAsync()
-
-          try
-            let txStream = conn.GetTransmitSink()
-            let msg = $"%s{args.Author.Username} %s{msg}"
-            do! textToVoice msg txStream
-            do! conn.SendSpeakingAsync(true)
-            do! txStream.FlushAsync()
-            do! conn.WaitForPlaybackFinishAsync()
-            do! conn.SendSpeakingAsync(false)
-            return Ok()
-          with
-          | e ->
-            do! conn.SendSpeakingAsync(false)
-            raise e
-            return Ok()
+        with
+        | e ->
+          do! conn.SendSpeakingAsync(false)
+          raise e
+          return Ok()
       }
     )

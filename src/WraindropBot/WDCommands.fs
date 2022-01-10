@@ -41,15 +41,15 @@ type WDCommands() =
               return Error "ボイスチャンネルに接続済みです。"
 
             else if isNull voiceChannel then
-              return Error "'join'コマンドはボイスチャンネルに接続した状態で呼び出してください。"
+              return Error "`join`コマンドはボイスチャンネルに接続した状態で呼び出してください。"
 
             else
               Utils.logfn "Connecting to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
               let! conn = voiceNext.ConnectAsync(voiceChannel)
               Utils.logfn "Connected to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
 
-              let! _ = conn.SendSpeakingAsync(false)
-              let! _ = ctx.RespondAsync($"ボイスチャンネル'#%s{voiceChannel.Name}'に接続しました。")
+              let _ = conn.SendSpeakingAsync(false)
+              let! _ = ctx.RespondAsync($"ボイスチャンネル %s{voiceChannel.Name} に接続しました。")
 
               return Ok()
         }

@@ -11,8 +11,8 @@ type SubCommandConfig =
 type WDConfig =
   { [<JsonField("token")>]
     token: string
-    [<JsonField("command")>]
-    command: string }
+    [<JsonField("commandPrefix")>]
+    commandPrefix: string }
 
 
 [<RequireQualifiedAccess>]
