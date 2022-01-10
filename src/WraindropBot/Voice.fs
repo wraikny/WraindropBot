@@ -82,9 +82,8 @@ let speak (conn: VoiceNextConnection) (args: MessageCreateEventArgs) (msg: strin
         while conn.IsPlaying do
           do! conn.WaitForPlaybackFinishAsync()
 
-#if DEBUG
         Utils.logfn "Speak '%s'" msg
-#endif
+
         try
           let txStream = conn.GetTransmitSink()
           do! textToVoice msg txStream
