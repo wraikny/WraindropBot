@@ -12,7 +12,11 @@ type WDConfig =
   { [<JsonField("token")>]
     token: string
     [<JsonField("commandPrefix")>]
-    commandPrefix: string }
+    commandPrefix: string
+    [<JsonField("aquesTalkPath")>]
+    aquesTalkPath: string
+    [<JsonField("volume")>]
+    volume: int }
 
 
 [<RequireQualifiedAccess>]

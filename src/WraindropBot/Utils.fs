@@ -21,7 +21,7 @@ let handleError (respondAsync) (t: unit -> Task<Result<unit, string>>) =
       match! t () with
       | Ok () -> ()
       | Error msg ->
-        let! _ = respondAsync ($"エラー: %s{msg}")
+        let! _ = respondAsync (msg)
         ()
     with
     | e ->

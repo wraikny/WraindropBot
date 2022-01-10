@@ -75,23 +75,29 @@ Target.create
   )
 
 Target.create
-  "Publish"
+  "Publish.Raspbian"
   (fun _ ->
-    "src/WraindropBot/WraindropBot.fsproj"
-    |> DotNet.publish (fun p ->
-      let runtime = "linux-x64"
+    [ "linux-arm" ]
+    |> Seq.iter (fun runtime ->
+      "src/WraindropBot/WraindropBot.fsproj"
+      |> DotNet.publish (fun p ->
+        let runtime = "linux-arm"
 
-      { p with
-          Runtime = Some runtime
-          Configuration = DotNet.BuildConfiguration.Release
-          SelfContained = Some true
-          MSBuildParams =
-            { p.MSBuildParams with
-                Properties =
-                  ("PublishSingleFile", "true")
-                  :: ("PublishTrimmed", "true")
-                     :: p.MSBuildParams.Properties }
-          OutputPath = $"publish/%s{runtime}" |> Some }
+        { p with
+            Runtime = Some runtime
+            Configuration = DotNet.BuildConfiguration.Release
+            SelfContained = Some true
+            MSBuildParams =
+              { p.MSBuildParams with
+                  Properties =
+                    List.append
+                      [ ("DefineConstants", "OS_RASPBIAN")
+                        ("DebugType", "none")
+                        ("PublishSingleFile", "true")
+                        ("PublishTrimmed", "true") ]
+                      p.MSBuildParams.Properties }
+            OutputPath = $"publish/WraindropBot.%s{runtime}" |> Some }
+      )
     )
   )
 

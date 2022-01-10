@@ -1,5 +1,7 @@
 ﻿namespace WraindropBot
 
+open Microsoft.Extensions.DependencyInjection
+
 open System
 open System.Threading.Tasks
 
@@ -25,8 +27,17 @@ module Program =
 
           use client = new DiscordClient(discordConfig)
 
+          let services =
+            ServiceCollection()
+              .AddSingleton<InstantFields>()
+              .BuildServiceProvider()
+
           let commandsConfig =
-            CommandsNextConfiguration(EnableMentionPrefix = true, StringPrefixes = [ wdConfig.commandPrefix ])
+            CommandsNextConfiguration(
+              EnableMentionPrefix = true,
+              StringPrefixes = [ wdConfig.commandPrefix ],
+              Services = services
+            )
 
           let commands = client.UseCommandsNext(commandsConfig)
           commands.SetHelpFormatter<WDHelpFormatter>()
@@ -34,17 +45,11 @@ module Program =
 
           let voice = client.UseVoiceNext()
 
+          let voiceHandler = new VoiceHandler(wdConfig, services)
+
           client.add_MessageCreated (fun client args ->
             let conn = voice.GetConnection(args.Guild)
-
-            if isNull conn |> not then
-              Voice.convertMessage wdConfig args
-              |> Option.iter (fun msg ->
-                Task.Run(fun () -> Voice.speak conn args msg)
-                |> ignore
-              )
-
-            Task.CompletedTask
+            voiceHandler.OnReceived(conn, args)
           )
 
           do! client.ConnectAsync() |> Async.AwaitTask
