@@ -17,6 +17,32 @@ type WDCommands() =
 
   member val InstantFields: InstantFields = null with get, set
 
+  [<Command("speed"); Description("発話速度を取得します。(50~300)")>]
+  member this.Speed(ctx: CommandContext) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          let speed = this.InstantFields.GetSpeed(ctx.User.Id)
+          let! _ = ctx.RespondAsync($"現在の発話速度は `%d{speed}` です。")
+          return Ok()
+        }
+      )
+
+  [<Command("speed"); Description("発話速度を指定します。(50~300)")>]
+  member this.Speed(ctx: CommandContext, [<Description("発話速度")>] speed: int) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          let speed =
+            this.InstantFields.SetSpeed(ctx.User.Id, speed)
+
+          let! _ = ctx.RespondAsync($"発話速度が `%d{speed}` に設定されました。")
+          return Ok()
+        }
+      )
+
   [<Command("join"); Description("ボイスチャンネルに参加します。")>]
   member this.Join(ctx: CommandContext) =
     Utils.handleError
@@ -52,7 +78,11 @@ type WDCommands() =
               this.InstantFields.Joined(ctx.Guild.Id, ctx.Channel.Id)
 
               let _ = conn.SendSpeakingAsync(false)
-              let! _ = ctx.RespondAsync($"ボイスチャンネル <#%d{voiceChannel.Id}> に接続しました。\nテキストチャンネル <#%d{ctx.Channel.Id}> に投稿されたメッセージが読み上げられます。")
+
+              let! _ =
+                ctx.RespondAsync(
+                  $"ボイスチャンネル <#%d{voiceChannel.Id}> に接続しました。\nテキストチャンネル <#%d{ctx.Channel.Id}> に投稿されたメッセージが読み上げられます。"
+                )
 
               return Ok()
         }
@@ -78,7 +108,7 @@ type WDCommands() =
               conn.Disconnect()
               this.InstantFields.Leaved(ctx.Guild.Id)
               Utils.logfn "Disconnected at '%s'" ctx.Guild.Name
-              
+
 
               let! _ = ctx.RespondAsync($"ボイスチャンネル <#%d{channelId}> から切断しました。")
               return Ok()

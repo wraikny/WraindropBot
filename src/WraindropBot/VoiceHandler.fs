@@ -7,6 +7,7 @@ open System
 open System.Diagnostics
 open System.Threading.Tasks
 open System.IO
+open System.Runtime.InteropServices
 
 open DSharpPlus.VoiceNext
 open DSharpPlus.EventArgs
@@ -15,8 +16,7 @@ open DSharpPlus.EventArgs
 type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
   let instantFields = services.GetService<InstantFields>()
 
-#if OS_WINDOWS
-  member private _.TextToBytes(text: string): Task<byte []> =
+  member private _.TextToBytesForWindows(text: string) : Task<byte []> =
     task {
       use synth = new Speech.Synthesis.SpeechSynthesizer()
       use stream = new MemoryStream()
@@ -24,12 +24,11 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       synth.Speak(text)
       return stream.ToArray()
     }
-#else
-#if OS_RASPBIAN
-  member private _.TextToBytes(text: string): Task<byte []> =
+
+  member private this.TextToBytesForAquesTalk(args: MessageCreateEventArgs, text: string) : Task<byte []> =
     task {
       let voiceKind = "f1"
-      let speed = 100
+      let speed = instantFields.GetSpeed(args.Author.Id)
 
       use aquesTalk =
         Process.Start(
@@ -60,15 +59,27 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       let! _ = Task.WhenAll(writer, reader)
       return output.ToArray()
     }
-#else
-  member private _.TextToBytes (wdConfig: WDConfig) (text: string) : Task<byte []> =
-    raise <| NotImplementedException()
-#endif
-#endif
 
-  member private this.TextToVoice (text: string, outStream: VoiceTransmitSink) =
+  member private this.TextToBytes(_args: MessageCreateEventArgs, text: string) : Task<byte []> =
+  #if OS_RASPBIAN
+    this.TextToBytesForAquesTalk(_args, text)
+  #else
+
+    let os = Environment.OSVersion
+
+    match os.Platform with
+    | PlatformID.Win32S
+    | PlatformID.Win32Windows
+    | PlatformID.Win32NT
+    | PlatformID.WinCE
+      -> this.TextToBytesForWindows(text)
+    | _ ->
+      raise <| NotImplementedException()
+  #endif
+
+  member private this.TextToVoice(args: MessageCreateEventArgs, text: string, outStream: VoiceTransmitSink) =
     task {
-      let! bytes = this.TextToBytes(text)
+      let! bytes = this.TextToBytes(args, text)
 
       use ffmpeg =
         Process.Start(
@@ -97,15 +108,15 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       ()
     }
 
-  member private this.ConvertMessage (args: MessageCreateEventArgs) =
+  member private this.ConvertMessage(args: MessageCreateEventArgs) =
     let msg = args.Message.Content
     let author = args.Author
 
     if args.Author.IsCurrent
-      || args.Author.IsBot
-      || msg.StartsWith(wdConfig.commandPrefix)
-      || (args.MentionedUsers.Count <> 0
-          && args.MentionedUsers
+       || args.Author.IsBot
+       || msg.StartsWith(wdConfig.commandPrefix)
+       || (args.MentionedUsers.Count <> 0
+           && args.MentionedUsers
               |> Seq.forall (fun x -> x.IsBot)) then
       None
     else
@@ -127,7 +138,7 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
       Some $"%s{name}, %s{msgBuilder.ToString()}"
 
-  member private this.Speak(msg: string, conn: VoiceNextConnection, args: MessageCreateEventArgs) =
+  member private this.Speak(conn: VoiceNextConnection, args: MessageCreateEventArgs, msg: string) =
     Utils.handleError
       args.Message.RespondAsync
       (fun () ->
@@ -139,7 +150,7 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
           try
             let txStream = conn.GetTransmitSink()
-            do! this.TextToVoice (msg, txStream)
+            do! this.TextToVoice(args, msg, txStream)
             do! conn.SendSpeakingAsync(true)
             do! txStream.FlushAsync()
             do! conn.WaitForPlaybackFinishAsync()
@@ -153,14 +164,15 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
         }
       )
 
-  member this.OnReceived (conn: VoiceNextConnection, args: MessageCreateEventArgs) =
+  member this.OnReceived(conn: VoiceNextConnection, args: MessageCreateEventArgs) =
     let messageChannelId = args.Channel.Id
     let registeredChannelId = instantFields.GetChannel(args.Guild.Id)
 
-    if isNull conn |> not && (Some messageChannelId = registeredChannelId) then
+    if isNull conn |> not
+       && (Some messageChannelId = registeredChannelId) then
       this.ConvertMessage(args)
       |> Option.iter (fun msg ->
-        Task.Run(fun () -> this.Speak (msg, conn, args))
+        Task.Run(fun () -> this.Speak(conn, args, msg))
         |> ignore
       )
 

@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net6.0</TargetFramework>
+    <WarnOn>1182</WarnOn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -21,13 +22,6 @@
     <PackageReference Include="DSharpPlus.CommandsNext" Version="4.1.0" />
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.1.0" />
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
-  </ItemGroup>
-
-  <PropertyGroup Condition="(('$(OS)'=='Windows' Or '$(OS)'=='Windows_NT') And '$(RuntimeIdentifier)'=='') Or '$(RuntimeIdentifier)'=='win-x64'">
-    <DefineConstants>OS_WINDOWS</DefineConstants>
-  </PropertyGroup>
-  <ItemGroup Condition="(('$(OS)'=='Windows' Or '$(OS)'=='Windows_NT') And '$(RuntimeIdentifier)'=='') Or '$(RuntimeIdentifier)'=='win-x64'">
     <PackageReference Include="System.Speech" Version="6.0.0" />
   </ItemGroup>
-
 </Project>
