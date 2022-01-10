@@ -101,6 +101,8 @@ Target.create
     )
   )
 
+Target.create "None" ignore
+
 Target.create "All" ignore
 
 "Clean" ==> "Build" ==> "All"
