@@ -24,7 +24,7 @@ type WDCommands() =
       (fun () ->
         task {
           let speed = this.InstantFields.GetSpeed(ctx.User.Id)
-          let! _ = ctx.RespondAsync($"現在の発話速度は `%d{speed}` です。")
+          let! _ = ctx.RespondAsync($"<@!%d{ctx.User.Id}> の現在の発話速度は `%d{speed}` です。")
           return Ok()
         }
       )
@@ -38,7 +38,7 @@ type WDCommands() =
           let speed =
             this.InstantFields.SetSpeed(ctx.User.Id, speed)
 
-          let! _ = ctx.RespondAsync($"発話速度が `%d{speed}` に設定されました。")
+          let! _ = ctx.RespondAsync($"<@!%d{ctx.User.Id}> の発話速度が `%d{speed}` に設定されました。")
           return Ok()
         }
       )

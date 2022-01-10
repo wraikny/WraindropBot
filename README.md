@@ -1,3 +1,4 @@
+[![](https://github.com/wraikny/WraindropBot/workflows/CI/badge.svg)](https://github.com/wraikny/WraindropBot/actions?workflow=CI)
 # Wraindrop bot
 
 ## Environment
@@ -8,12 +9,17 @@
   * [ArticlesAudioVoiceNextPrerequisites - DSharpPlus](https://dsharpplus.github.io/articles/audio/voicenext/prerequisites.html)
 * AquesTalk (Raspberry Pi)
 
-## ビルド
+## 開発
 
 ### setup
 
 ```sh
 dotnet tool restore
+```
+
+### Build
+
+```sh
 dotnet fake build
 ```
 
@@ -31,7 +37,8 @@ dotnet fake build -t publish.raspbian
 
 ## RaspberryPiでAquesTalk Piをインストールする
 
-AquestTalk Pi は個人の非営利でのみ無償で使用できます。
+AquestTalk Pi は個人の非営利でのみ無償で使用できます。  
+それ以外の場合はライセンスを購入する必要があります。
 
 ```sh
 cd /home/pi
