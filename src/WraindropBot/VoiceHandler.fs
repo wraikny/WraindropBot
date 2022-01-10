@@ -61,9 +61,9 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     }
 
   member private this.TextToBytes(_args: MessageCreateEventArgs, text: string) : Task<byte []> =
-  #if OS_RASPBIAN
+#if OS_RASPBIAN
     this.TextToBytesForAquesTalk(_args, text)
-  #else
+#else
 
     let os = Environment.OSVersion
 
@@ -71,11 +71,9 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     | PlatformID.Win32S
     | PlatformID.Win32Windows
     | PlatformID.Win32NT
-    | PlatformID.WinCE
-      -> this.TextToBytesForWindows(text)
-    | _ ->
-      raise <| NotImplementedException()
-  #endif
+    | PlatformID.WinCE -> this.TextToBytesForWindows(text)
+    | _ -> raise <| NotImplementedException()
+#endif
 
   member private this.TextToVoice(args: MessageCreateEventArgs, text: string, outStream: VoiceTransmitSink) =
     task {
