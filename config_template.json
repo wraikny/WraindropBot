@@ -4,7 +4,7 @@
     "ignorePrefixes": [ "-", "!", "/", ":" ],
     "dbPath": "wraindrop.db",
     "usernameMaxLength": 32,
-    "requestCacheSeconds": 60,
+    "requestCacheSeconds": 300,
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
     "volume": 60,
     "defaultSpeed": 100
