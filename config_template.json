@@ -2,6 +2,10 @@
     "token": "",
     "commandPrefixes": [ "!wd" ],
     "ignorePrefixes": [ "-", "!", "/", ":" ],
+    "dbPath": "wraindrop.db",
+    "usernameMaxLength": 32,
+    "requestCacheSeconds": 60,
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
-    "volume": 60
+    "volume": 60,
+    "defaultSpeed": 100
 }

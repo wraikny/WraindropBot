@@ -33,6 +33,21 @@ module Utils =
     }
     :> Task
 
+  let (|ValidStr|_|) =
+    function
+    | null
+    | "" -> None
+    | s -> Some s
+
+  open DSharpPlus.Entities
+
+  let getNicknameOrUsername (discordMember: DiscordMember) =
+    (discordMember.Nickname, discordMember.Username)
+    |> function
+      | (ValidStr s, _)
+      | (_, s) -> s
+
+
 [<AutoOpen>]
 module Extension =
   open System.Text

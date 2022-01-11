@@ -12,10 +12,15 @@ open System.Text.RegularExpressions
 
 open DSharpPlus.VoiceNext
 open DSharpPlus.EventArgs
-
+open DSharpPlus.Entities
 
 type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
   let instantFields = services.GetService<InstantFields>()
+
+  let dbHandler =
+    services.GetService<Database.DatabaseHandler>()
+
+  let discordCache = services.GetService<DiscordCache>()
 
   member private _.TextToBytesForWindows(text: string) : Task<byte []> =
     task {
@@ -26,16 +31,15 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       return stream.ToArray()
     }
 
-  member private this.TextToBytesForAquesTalk(args: MessageCreateEventArgs, text: string) : Task<byte []> =
+  member private this.TextToBytesForAquesTalk(user: Database.User, text: string) : Task<byte []> =
     task {
       let voiceKind = "f1"
-      let speed = instantFields.GetSpeed(args.Author.Id)
 
       use aquesTalk =
         Process.Start(
           ProcessStartInfo(
             FileName = wdConfig.aquesTalkPath,
-            Arguments = $"-f - -v %s{voiceKind} -g %d{wdConfig.volume} -s %d{speed}",
+            Arguments = $"-f - -v %s{voiceKind} -g %d{wdConfig.volume} -s %d{user.speakingSpeed}",
             RedirectStandardInput = true,
             RedirectStandardOutput = true,
             UseShellExecute = false
@@ -61,9 +65,9 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       return output.ToArray()
     }
 
-  member private this.TextToBytes(_args: MessageCreateEventArgs, text: string) : Task<byte []> =
+  member private this.TextToBytes(_user: Database.User, text: string) : Task<byte []> =
 #if OS_RASPBIAN
-    this.TextToBytesForAquesTalk(_args, text)
+    this.TextToBytesForAquesTalk(_user, text)
 #else
 
     let os = Environment.OSVersion
@@ -76,9 +80,9 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     | _ -> raise <| NotImplementedException()
 #endif
 
-  member private this.TextToVoice(args: MessageCreateEventArgs, text: string, outStream: VoiceTransmitSink) =
+  member private this.TextToVoice(user: Database.User, text: string, outStream: VoiceTransmitSink) =
     task {
-      let! bytes = this.TextToBytes(args, text)
+      let! bytes = this.TextToBytes(user, text)
 
       use ffmpeg =
         Process.Start(
@@ -107,43 +111,66 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       ()
     }
 
-  member private this.ConvertMessage(args: MessageCreateEventArgs) =
-    let msg = args.Message.Content
-    let author = args.Author
+  member _.GetUser(guild: DiscordGuild, userId) =
+    task {
+      let guildId = guild.Id
 
-    if args.Author.IsCurrent
-       || args.Author.IsBot
-       || (args.MentionedUsers.Count <> 0
-           && args.MentionedUsers
-              |> Seq.forall (fun x -> x.IsBot))
-       || wdConfig.commandPrefixes
-          |> Seq.exists msg.StartsWith
-       || wdConfig.ignorePrefixes
-          |> Seq.exists msg.StartsWith then
-      None
-    else
-      let name = author.Username
+      match! dbHandler.GetUser(guildId, userId) with
+      | Some ({ name = Utils.ValidStr _ } as u) -> return u
+      | Some u ->
+        let! dmember = discordCache.GetDiscordMemberAsync(guild, userId)
 
-      let msgBuilder = Text.StringBuilder(msg)
+        return
+          { u with
+              name = Utils.getNicknameOrUsername dmember }
+      | None ->
+        let! dmember = discordCache.GetDiscordMemberAsync(guild, userId)
+        return Database.User.init guildId userId (Utils.getNicknameOrUsername dmember) wdConfig.defaultSpeed
+    }
 
-      msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
-      |> ignore
+  member private this.ConvertMessage(author: Database.User, args: MessageCreateEventArgs) =
+    task {
+      let msg = args.Message.Content
 
-      for role in args.MentionedRoles do
-        msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
+      if args.Author.IsCurrent
+         || args.Author.IsBot
+         || (args.MentionedUsers.Count <> 0
+             && args.MentionedUsers
+                |> Seq.forall (fun x -> x.IsBot))
+         || wdConfig.commandPrefixes
+            |> Seq.exists msg.StartsWith
+         || wdConfig.ignorePrefixes
+            |> Seq.exists msg.StartsWith then
+        return None
+      else
+        let dbUsers =
+          args.MentionedUsers
+          |> Seq.map (fun u -> this.GetUser(args.Guild, u.Id))
+          |> Seq.toArray
+
+        let msgBuilder = Text.StringBuilder(msg)
+
+        msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
         |> ignore
 
-      for ch in args.MentionedChannels do
-        msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
-        |> ignore
+        for role in args.MentionedRoles do
+          msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
+          |> ignore
 
-      for user in args.MentionedUsers do
-        msgBuilder.Replace($"<@!%d{user.Id}>", $"@%s{user.Username}")
-        |> ignore
+        for ch in args.MentionedChannels do
+          msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
+          |> ignore
 
-      Some $"%s{name}, %s{msgBuilder.ToString()}"
+        let! users = Task.WhenAll(dbUsers)
 
-  member private this.Speak(conn: VoiceNextConnection, args: MessageCreateEventArgs, msg: string) =
+        for user in users do
+          msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
+          |> ignore
+
+        return Some $"%s{author.name}, %s{msgBuilder.ToString()}"
+    }
+
+  member private this.Speak(user: Database.User, conn: VoiceNextConnection, args: MessageCreateEventArgs, msg: string) =
     Utils.handleError
       args.Message.RespondAsync
       (fun () ->
@@ -155,7 +182,7 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
           try
             let txStream = conn.GetTransmitSink()
-            do! this.TextToVoice(args, msg, txStream)
+            do! this.TextToVoice(user, msg, txStream)
             do! conn.SendSpeakingAsync(true)
             do! txStream.FlushAsync()
             do! conn.WaitForPlaybackFinishAsync()
@@ -173,12 +200,24 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     let messageChannelId = args.Channel.Id
     let registeredChannelId = instantFields.GetChannel(args.Guild.Id)
 
-    if isNull conn |> not
-       && (Some messageChannelId = registeredChannelId) then
-      this.ConvertMessage(args)
-      |> Option.iter (fun msg ->
-        Task.Run(fun () -> this.Speak(conn, args, msg))
-        |> ignore
-      )
+    let _ =
+      task {
+
+        if isNull conn |> not
+           && (Some messageChannelId = registeredChannelId) then
+          let! user = this.GetUser(args.Guild, args.Author.Id)
+
+          Task.Run(fun () ->
+            task {
+              let! msg = this.ConvertMessage(user, args)
+
+              match msg with
+              | None -> return ()
+              | Some msg -> return! this.Speak(user, conn, args, msg)
+            }
+            :> Task
+          )
+          |> ignore
+      }
 
     Task.CompletedTask

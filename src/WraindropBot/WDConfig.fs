@@ -4,10 +4,6 @@ open System.IO
 
 open FSharp.Json
 
-type SubCommandConfig =
-  { [<JsonField("description")>]
-    description: string }
-
 type WDConfig =
   { [<JsonField("token")>]
     token: string
@@ -15,17 +11,32 @@ type WDConfig =
     commandPrefixes: string []
     [<JsonField("ignorePrefixes")>]
     ignorePrefixes: string []
+    [<JsonField("dbPath")>]
+    dbPath: string
+    [<JsonField("usernameMaxLength")>]
+    usernameMaxLength: int
+    [<JsonField("requestCacheSeconds")>]
+    requestCacheSeconds: int
     [<JsonField("aquesTalkPath")>]
     aquesTalkPath: string
     [<JsonField("volume")>]
-    volume: int }
+    volume: int
+    [<JsonField("defaultSpeed")>]
+    defaultSpeed: int }
 
 
 [<RequireQualifiedAccess>]
 module WDConfig =
+  let validateSpeed = max 50 >> min 300
+
   let asyncLoad (path: string) =
     async {
       let! text = File.ReadAllTextAsync(path) |> Async.AwaitTask
       let config = Json.deserialize<WDConfig> (text)
+
+      let config =
+        { config with
+            defaultSpeed = config.defaultSpeed |> validateSpeed }
+
       return config
     }

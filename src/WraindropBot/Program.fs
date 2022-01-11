@@ -21,15 +21,32 @@ module Program =
 
         | Some path ->
           let! wdConfig = WDConfig.asyncLoad path
+          Utils.logfn "Config loaded from '%s'" path
+
+          let dbConnStr =
+            Database.createConnectionStr wdConfig.dbPath
+
+          Utils.logfn "Setting up database"
+
+          do!
+            Database.setupDatabase dbConnStr
+            |> Async.AwaitTask
 
           let discordConfig =
             DiscordConfiguration(Token = wdConfig.token, TokenType = TokenType.Bot, AutoReconnect = true)
 
           use client = new DiscordClient(discordConfig)
 
+          Utils.logfn "Building Services"
+
+          let discordCache = DiscordCache(wdConfig)
+
           let services =
             ServiceCollection()
+              .AddSingleton<WDConfig>(wdConfig)
               .AddSingleton<InstantFields>()
+              .AddSingleton<Database.DatabaseHandler>(Database.DatabaseHandler(dbConnStr))
+              .AddSingleton<DiscordCache>(discordCache)
               .BuildServiceProvider()
 
           let commandsConfig =
@@ -52,9 +69,13 @@ module Program =
             voiceHandler.OnReceived(conn, args)
           )
 
+          Utils.logfn "Connectiong"
+
           do! client.ConnectAsync() |> Async.AwaitTask
 
-          do! Async.Sleep(-1)
+          while true do
+            do! Async.Sleep(wdConfig.requestCacheSeconds)
+            discordCache.Clean()
 
           return 0
 

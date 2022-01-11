@@ -11,6 +11,7 @@
     <Compile Include="WDConfig.fs" />
     <Compile Include="Database.fs" />
     <Compile Include="InstantFields.fs" />
+    <Compile Include="DiscordCache.fs" />
     <Compile Include="WDCommands.fs" />
     <Compile Include="VoiceHandler.fs" />
     <Compile Include="WDHelpFormatter.fs" />
@@ -18,10 +19,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.0.123" />
     <PackageReference Include="DSharpPlus" Version="4.1.0" />
     <PackageReference Include="DSharpPlus.CommandsNext" Version="4.1.0" />
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.1.0" />
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
+    <PackageReference Include="System.Data.SQLite" Version="1.0.115.5" />
     <PackageReference Include="System.Speech" Version="6.0.0" />
   </ItemGroup>
 </Project>
