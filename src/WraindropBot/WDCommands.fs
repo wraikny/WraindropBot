@@ -23,7 +23,7 @@ type WDCommands() =
   member private _.RespondReadAs(ctx: CommandContext, userId, name: string) =
     ctx.RespondAsync($"<@!%d{userId}> は %s{ctx.Guild.Name} で %s{name} と読み上げられます。")
 
-  [<Command("name"); Description("サーバー毎の読み上げ時の名前を取得します。")>]
+  [<Command("name"); Description("サーバー毎の読み上げる名前を取得します。")>]
   member this.Name(ctx: CommandContext) =
     Utils.handleError
       ctx.RespondAsync
@@ -49,25 +49,32 @@ type WDCommands() =
         task {
           let maxLen = this.WDConfig.usernameMaxLength
 
-          if name.Length < 1 || maxLen < name.Length then
-            return Error $"名前は1文字以上%d{maxLen}文字以下にしてください。"
-          else
+          match name with
+          | null ->
+            do! this.DBHandler.SetUserName(ctx.Guild.Id, targetId, null)
+            let! guildMember = this.DiscordCache.GetDiscordMemberAsync(ctx.Guild, ctx.User.Id)
+            let! _ = this.RespondReadAs(ctx, ctx.User.Id, Utils.getNicknameOrUsername guildMember)
+            return Ok()
+          | name when (1 <= name.Length && name.Length <= maxLen) ->
             do! this.DBHandler.SetUserName(ctx.Guild.Id, targetId, name)
-
             let! _ = this.RespondReadAs(ctx, targetId, name)
             return Ok()
+          | _ -> return Error $"名前は1文字以上%d{maxLen}文字以下にしてください。"
         }
       )
 
-  [<Command("name"); Description("サーバー毎に読み上げ時の名前を設定します。")>]
-  member this.Name(ctx: CommandContext, [<Description("読み上げ時の名前")>] name: string) = this.SetName(ctx, ctx.User.Id, name)
+  [<Command("name-reset"); Description("サーバー毎に読み上げる名前を消去します。")>]
+  member this.ResetName(ctx: CommandContext) = this.SetName(ctx, ctx.User.Id, null)
 
-  [<Command("name"); Description("サーバー毎に読み上げ時の名前を設定します。")>]
+  [<Command("name"); Description("サーバー毎に読み上げる名前を設定します。")>]
+  member this.Name(ctx: CommandContext, [<Description("読み上げる名前")>] name: string) = this.SetName(ctx, ctx.User.Id, name)
+
+  [<Command("name"); Description("サーバー毎に読み上げる名前を設定します。")>]
   member this.Name
     (
       ctx: CommandContext,
       [<Description("対象のユーザ")>] target: DiscordMember,
-      [<Description("読み上げ時の名前")>] name: string
+      [<Description("読み上げる名前")>] name: string
     ) =
     this.SetName(ctx, target.Id, name)
 

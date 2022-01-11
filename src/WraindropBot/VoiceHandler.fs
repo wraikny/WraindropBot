@@ -175,14 +175,15 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       args.Message.RespondAsync
       (fun () ->
         task {
-          while conn.IsPlaying do
-            do! conn.WaitForPlaybackFinishAsync()
-
           Utils.logfn "Speak '%s'" msg
 
           try
             let txStream = conn.GetTransmitSink()
             do! this.TextToVoice(user, msg, txStream)
+
+            while conn.IsPlaying do
+              do! conn.WaitForPlaybackFinishAsync()
+
             do! conn.SendSpeakingAsync(true)
             do! txStream.FlushAsync()
             do! conn.WaitForPlaybackFinishAsync()
