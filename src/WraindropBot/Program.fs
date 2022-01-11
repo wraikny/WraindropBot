@@ -35,7 +35,7 @@ module Program =
           let commandsConfig =
             CommandsNextConfiguration(
               EnableMentionPrefix = true,
-              StringPrefixes = [ wdConfig.commandPrefix ],
+              StringPrefixes = wdConfig.commandPrefixes,
               Services = services
             )
 

@@ -11,8 +11,10 @@ type SubCommandConfig =
 type WDConfig =
   { [<JsonField("token")>]
     token: string
-    [<JsonField("commandPrefix")>]
-    commandPrefix: string
+    [<JsonField("commandPrefixes")>]
+    commandPrefixes: string[]
+    [<JsonField("ignorePrefixes")>]
+    ignorePrefixes: string[]
     [<JsonField("aquesTalkPath")>]
     aquesTalkPath: string
     [<JsonField("volume")>]
