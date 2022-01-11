@@ -122,14 +122,13 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
             do! txStream.FlushAsync()
             do! conn.WaitForPlaybackFinishAsync()
             do! conn.SendSpeakingAsync(false)
-
-            return Ok()
           with
           | e ->
             do! conn.SendSpeakingAsync(false)
 
             raise e
-            return Ok()
+
+          return Ok()
         }
       )
 
@@ -145,24 +144,19 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
           let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
           let! msg = textConverter.ConvertTextForSpeeching(user, args)
 
-          while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
-                <> args.Message.Id do
-            do! Task.Yield()
 
           match msg with
           | None -> ()
           | Some msg ->
-            Task.Run(fun () ->
-              task {
-                try
-                  do! this.Speak(user, conn, args, msg)
-                finally
-                  speakingMessageIdDict.TryRemove(args.Guild.Id)
-                  |> ignore
-              }
-              :> Task
-            )
-            |> ignore
+            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
+                  <> args.Message.Id do
+              do! Task.Yield()
+
+            try
+              do! this.Speak(user, conn, args, msg)
+            finally
+              speakingMessageIdDict.TryRemove(args.Guild.Id)
+              |> ignore
       }
 
     Task.CompletedTask
