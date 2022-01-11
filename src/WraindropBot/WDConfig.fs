@@ -15,6 +15,10 @@ type WDConfig =
     dbPath: string
     [<JsonField("usernameMaxLength")>]
     usernameMaxLength: int
+    [<JsonField("dictionaryReplacementRepeatedCount")>]
+    dictionaryReplacementRepeatedCount: int
+    [<JsonField("dictionaryMaxLength")>]
+    dictionaryMaxLength: int
     [<JsonField("requestCacheSeconds")>]
     requestCacheSeconds: int
     [<JsonField("aquesTalkPath")>]

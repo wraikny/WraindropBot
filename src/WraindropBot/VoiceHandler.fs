@@ -17,10 +17,7 @@ open DSharpPlus.Entities
 type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
   let instantFields = services.GetService<InstantFields>()
 
-  let dbHandler =
-    services.GetService<Database.DatabaseHandler>()
-
-  let discordCache = services.GetService<DiscordCache>()
+  let textConverter = services.GetService<TextConverter>()
 
   member private _.TextToBytesForWindows(text: string) : Task<byte []> =
     task {
@@ -111,65 +108,6 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       ()
     }
 
-  member _.GetUser(guild: DiscordGuild, userId) =
-    task {
-      let guildId = guild.Id
-
-      match! dbHandler.GetUser(guildId, userId) with
-      | Some ({ name = Utils.ValidStr _ } as u) -> return u
-      | Some u ->
-        let! dmember = discordCache.GetDiscordMemberAsync(guild, userId)
-
-        return
-          { u with
-              name = Utils.getNicknameOrUsername dmember }
-      | None ->
-        let! dmember = discordCache.GetDiscordMemberAsync(guild, userId)
-        return Database.User.init guildId userId (Utils.getNicknameOrUsername dmember) wdConfig.defaultSpeed
-    }
-
-  member private this.ConvertMessage(author: Database.User, args: MessageCreateEventArgs) =
-    task {
-      let msg = args.Message.Content
-
-      if args.Author.IsCurrent
-         || args.Author.IsBot
-         || (args.MentionedUsers.Count <> 0
-             && args.MentionedUsers
-                |> Seq.forall (fun x -> x.IsBot))
-         || wdConfig.commandPrefixes
-            |> Seq.exists msg.StartsWith
-         || wdConfig.ignorePrefixes
-            |> Seq.exists msg.StartsWith then
-        return None
-      else
-        let dbUsers =
-          args.MentionedUsers
-          |> Seq.map (fun u -> this.GetUser(args.Guild, u.Id))
-          |> Seq.toArray
-
-        let msgBuilder = Text.StringBuilder(msg)
-
-        msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
-        |> ignore
-
-        for role in args.MentionedRoles do
-          msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
-          |> ignore
-
-        for ch in args.MentionedChannels do
-          msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
-          |> ignore
-
-        let! users = Task.WhenAll(dbUsers)
-
-        for user in users do
-          msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
-          |> ignore
-
-        return Some $"%s{author.name}, %s{msgBuilder.ToString()}"
-    }
-
   member private this.Speak(user: Database.User, conn: VoiceNextConnection, args: MessageCreateEventArgs, msg: string) =
     Utils.handleError
       args.Message.RespondAsync
@@ -206,11 +144,11 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
         if isNull conn |> not
            && (Some messageChannelId = registeredChannelId) then
-          let! user = this.GetUser(args.Guild, args.Author.Id)
+          let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
 
           Task.Run(fun () ->
             task {
-              let! msg = this.ConvertMessage(user, args)
+              let! msg = textConverter.ConvertTextForSpeeching(user, args)
 
               match msg with
               | None -> return ()

@@ -12,8 +12,9 @@
     <Compile Include="Database.fs" />
     <Compile Include="InstantFields.fs" />
     <Compile Include="DiscordCache.fs" />
-    <Compile Include="WDCommands.fs" />
+    <Compile Include="TextConverter.fs" />
     <Compile Include="VoiceHandler.fs" />
+    <Compile Include="WDCommands.fs" />
     <Compile Include="WDHelpFormatter.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>

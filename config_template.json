@@ -4,6 +4,8 @@
     "ignorePrefixes": [ "-", "!", "/", ":" ],
     "dbPath": "wraindrop.db",
     "usernameMaxLength": 32,
+    "dictionaryReplacementRepeatedCount": 3,
+    "dictionaryMaxLength": 32,
     "requestCacheSeconds": 300,
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
     "volume": 60,

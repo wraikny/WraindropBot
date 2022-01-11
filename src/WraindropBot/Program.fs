@@ -39,14 +39,19 @@ module Program =
 
           Utils.logfn "Building Services"
 
+          let dbHandler = Database.DatabaseHandler(dbConnStr)
           let discordCache = DiscordCache(wdConfig)
+
+          let textConverter =
+            TextConverter(wdConfig, discordCache, dbHandler)
 
           let services =
             ServiceCollection()
               .AddSingleton<WDConfig>(wdConfig)
               .AddSingleton<InstantFields>()
-              .AddSingleton<Database.DatabaseHandler>(Database.DatabaseHandler(dbConnStr))
+              .AddSingleton<Database.DatabaseHandler>(dbHandler)
               .AddSingleton<DiscordCache>(discordCache)
+              .AddSingleton<TextConverter>(textConverter)
               .BuildServiceProvider()
 
           let commandsConfig =

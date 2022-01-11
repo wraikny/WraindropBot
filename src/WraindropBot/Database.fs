@@ -21,13 +21,15 @@ let private execute (ConnStr connStr) (sql: string) (param: obj) =
     use! trans = conn.BeginTransactionAsync()
 
     try
-      let! _ = conn.ExecuteAsync(sql, param, trans)
+      let! count = conn.ExecuteAsync(sql, param, trans)
 
       do! trans.CommitAsync()
+      return count
     with
     | e ->
       do! trans.RollbackAsync()
       raise e
+      return 0
   }
 
 let private query<'a> (ConnStr connStr) (sql: string) (param: obj) =
@@ -40,12 +42,20 @@ let private query<'a> (ConnStr connStr) (sql: string) (param: obj) =
 let setupDatabase (connStr) =
   execute
     connStr
-    """create table if not exists users (
+    """
+create table if not exists users (
   guildId integer not null,
   userId integer not null,
   name text default null,
   speakingSpeed integer not null default 100,
   primary key (guildId, userId)
+);
+
+create table if not exists words (
+  guildId integer not null,
+  word text not null,
+  replaced text not null,
+  primary key (guildId, word)
 );"""
     null
   :> Task
@@ -63,6 +73,19 @@ module User =
       userId = userId
       name = name
       speakingSpeed = speakingSpeed }
+
+[<CLIMutable>]
+type Word =
+  { guildId: uint64
+    word: string
+    replaced: string }
+
+module Word =
+  let init guildId word replaced =
+    { guildId = guildId
+      word = word
+      replaced = replaced }
+
 
 [<AllowNullLiteral>]
 type DatabaseHandler(connStr: ConnStr) =
@@ -93,6 +116,7 @@ do update
       {| guildId = guildId
          userId = userId
          name = name |}
+    :> Task
 
   member _.SetUserSpeed(guildId: uint64, userId: uint64, speed: int) =
     let speed = speed |> WDConfig.validateSpeed
@@ -107,7 +131,7 @@ do update
 ;"""
 
     task {
-      do!
+      let! _ =
         execute
           connStr
           sql
@@ -117,3 +141,53 @@ do update
 
       return speed
     }
+
+  member _.GetWords(guildId: uint64) =
+    task {
+      let! words = query<Word> connStr "select * from words where guildId = @guildId;" {| guildId = guildId |}
+
+      return words
+    }
+
+  member _.GetWord(guildId: uint64, word: string) =
+    task {
+      let! words =
+        query<Word>
+          connStr
+          "select * from words where guildId = @guildId and word = @word;"
+          {| guildId = guildId; word = word |}
+
+      return words |> Seq.tryHead
+    }
+
+  member _.SetWord(guildId: uint64, word: string, replaced: string) =
+    let sql =
+      """
+insert into words (guildId, word, replaced)
+values (@guildId, @word, @replaced)
+on conflict (guildId, word)
+do update
+  set replaced = @replaced
+;"""
+
+    execute
+      connStr
+      sql
+      {| guildId = guildId
+         word = word
+         replaced = replaced |}
+    :> Task
+
+  member _.DeleteWord(guildId: uint64, word: string) =
+    task {
+      let! count =
+        execute
+          connStr
+          "delete from words where guildId = @guildId and word = @word"
+          {| guildId = guildId; word = word |}
+
+      return count <> 0
+    }
+
+  member _.DeleteWords(guildId: uint64) =
+    execute connStr "delete from words where guildId = @guildId" {| guildId = guildId |}
