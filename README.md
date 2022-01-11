@@ -1,11 +1,13 @@
 [![](https://github.com/wraikny/WraindropBot/workflows/CI/badge.svg)](https://github.com/wraikny/WraindropBot/actions?workflow=CI)
 # Wraindrop bot
 
+![](images/banner-small.png)
+
 よくあるDiscord 読み上げbotです。
 
 [使い方ドキュメント](/doc/usage.md)
 
-## Environment
+## 環境
 * .NET6 （開発環境）
 * ffmpeg
   * 例えば `sudo apt install ffmpeg` や `scoop install ffmpeg` などとする。
