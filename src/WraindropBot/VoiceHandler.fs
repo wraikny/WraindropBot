@@ -8,6 +8,7 @@ open System.Diagnostics
 open System.Threading.Tasks
 open System.IO
 open System.Runtime.InteropServices
+open System.Text.RegularExpressions
 
 open DSharpPlus.VoiceNext
 open DSharpPlus.EventArgs
@@ -112,15 +113,21 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
     if args.Author.IsCurrent
        || args.Author.IsBot
-       || msg.StartsWith(wdConfig.commandPrefix)
        || (args.MentionedUsers.Count <> 0
            && args.MentionedUsers
-              |> Seq.forall (fun x -> x.IsBot)) then
+              |> Seq.forall (fun x -> x.IsBot))
+       || wdConfig.commandPrefixes
+          |> Seq.exists msg.StartsWith
+       || wdConfig.ignorePrefixes
+          |> Seq.exists msg.StartsWith then
       None
     else
       let name = author.Username
 
       let msgBuilder = Text.StringBuilder(msg)
+
+      msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
+      |> ignore
 
       for role in args.MentionedRoles do
         msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
