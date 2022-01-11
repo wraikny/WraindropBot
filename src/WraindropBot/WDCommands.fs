@@ -25,7 +25,7 @@ type WDCommands() =
     ctx.RespondAsync($"<@!%d{userId}>は**%s{ctx.Guild.Name}**で`%s{name}`と読み上げられます。")
 
   [<Command("name-get");
-    Description("サーバー毎の読み上げる名前を取得します。");
+    Description("サーバーで読み上げる名前を取得します。");
     Aliases([| "ng" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.GetName(ctx: CommandContext) =
@@ -61,15 +61,15 @@ type WDCommands() =
       )
 
   [<Command("name-set");
-    Description("サーバー毎に読み上げる名前を設定します。");
+    Description("サーバーで読み上げる名前を設定します。");
     Aliases([| "ns" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetName(ctx: CommandContext, [<Description("読み上げる名前")>] name: string) =
     this.SetName(ctx, ctx.User.Id, name)
 
-  [<Command("name-set-to");
-    Description("サーバー毎に読み上げる名前を設定します。");
-    Aliases([| "nst" |]);
+  [<Command("name-set-user");
+    Description("サーバーで指定したユーザを読み上げる名前を設定します。");
+    Aliases([| "nsu" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetName
     (
@@ -80,13 +80,20 @@ type WDCommands() =
     this.SetName(ctx, target.Id, name)
 
   [<Command("name-delete");
-    Description("サーバー毎に読み上げる名前を消去します。");
+    Description("サーバーで読み上げる名前を消去します。");
     Aliases([| "nd" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.ClearName(ctx: CommandContext) = this.SetName(ctx, ctx.User.Id, null)
+  member this.DeleteName(ctx: CommandContext) = this.SetName(ctx, ctx.User.Id, null)
+
+  [<Command("name-delete-user");
+    Description("サーバーで指定したユーザを読み上げる名前を消去します。");
+    Aliases([| "ndu" |]);
+    RequireBotPermissions(Permissions.SendMessages)>]
+  member this.DeleteName(ctx: CommandContext, [<Description("対象のユーザ")>] target: DiscordMember) =
+    this.SetName(ctx, target.Id, null)
 
   [<Command("speed-get");
-    Description("発話速度を取得します。");
+    Description("サーバーでの発話速度を取得します。");
     Aliases([| "sg" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.GetSpeed(ctx: CommandContext) =
@@ -108,7 +115,7 @@ type WDCommands() =
       )
 
   [<Command("speed-set");
-    Description("発話速度を指定します。(50~300)");
+    Description("サーバーでの発話速度を設定します。(50~300)");
     Aliases([| "ss" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetSpeed(ctx: CommandContext, [<Description("発話速度")>] speed: int) =
@@ -124,7 +131,7 @@ type WDCommands() =
       )
 
   [<Command("dict-list");
-    Description("辞書から単語の一覧を取得します。");
+    Description("読み上げ時に置換されるワードの一覧を取得します。");
     Aliases([| "dl" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.ListWords(ctx: CommandContext) =
@@ -136,13 +143,13 @@ type WDCommands() =
           let words = words |> Seq.toArray
 
           if words.Length = 0 then
-            let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**の辞書に単語が登録されていません。")
+            let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**の辞書にワードが登録されていません。")
             return Ok()
           else
             let res = StringBuilder()
 
             res
-              .AppendLine($"**%s{ctx.Guild.Name}**の辞書に登録されている単語の一覧です。")
+              .AppendLine($"**%s{ctx.Guild.Name}**の辞書に登録されているワードの一覧です。")
               .AppendLine("```")
             |> ignore
 
@@ -162,10 +169,10 @@ type WDCommands() =
       )
 
   [<Command("dict-get");
-    Description("辞書から単語を取得します。");
+    Description("読み上げ時に置換されるワードを取得します。");
     Aliases([| "dg" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.GetWord(ctx: CommandContext, [<Description("対象の文字列")>] word: string) =
+  member this.GetWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
@@ -181,30 +188,30 @@ type WDCommands() =
       )
 
   [<Command("dict-set");
-    Description("辞書に単語を登録します。");
+    Description("読み上げ時に置換されるワードを追加・更新します。");
     Aliases([| "ds" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.AddWord
     (
       ctx: CommandContext,
-      [<Description("対象の文字列")>] word: string,
-      [<Description("置き換え後の文字列")>] replaced: string
+      [<Description("対象のワード")>] word: string,
+      [<Description("置換するワード")>] replaced: string
     ) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
         task {
           do! this.DBHandler.SetWord(ctx.Guild.Id, word, replaced)
-          let! _ = ctx.RespondAsync($"単語を登録しました。\n**%s{ctx.Guild.Name}**で`%s{word}`は`%s{replaced}`に置換されます。")
+          let! _ = ctx.RespondAsync($"ワードを登録しました。\n**%s{ctx.Guild.Name}**で`%s{word}`は`%s{replaced}`に置換されます。")
           return Ok()
         }
       )
 
   [<Command("dict-delete");
-    Description("辞書から単語を削除します。");
+    Description("読み上げ時に置換されるワードを削除します。");
     Aliases([| "dd" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.DeleteWord(ctx: CommandContext, [<Description("対象の文字列")>] word: string) =
+  member this.DeleteWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
@@ -219,23 +226,20 @@ type WDCommands() =
         }
       )
 
-  [<Command("dict-clear");
-    Description("辞書からすべての単語を削除します。");
-    Aliases([| "dc" |]);
-    RequireBotPermissions(Permissions.SendMessages)>]
+  [<Command("dict-clear"); Description("読み上げ時に置換されるワードをすべて削除します。"); RequireBotPermissions(Permissions.SendMessages)>]
   member this.ClearWords(ctx: CommandContext) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
         task {
           let! deletedCount = this.DBHandler.DeleteWords(ctx.Guild.Id)
-          let! _ = ctx.RespondAsync($"%d{deletedCount}件の単語を**%s{ctx.Guild.Name}**の辞書から削除しました。")
+          let! _ = ctx.RespondAsync($"%d{deletedCount}件のワードを**%s{ctx.Guild.Name}**の辞書から削除しました。")
           return Ok()
         }
       )
 
   [<Command("join");
-    Description("ボイスチャンネルに参加します。");
+    Description("ボイスチャンネルに参加します。このコマンドを実行したテキストチャンネルに投稿された文章が自動で読み上げられます。");
     Aliases([| "j" |]);
     RequireBotPermissions(Permissions.SendMessages
                           ||| Permissions.UseVoice
