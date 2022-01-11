@@ -49,8 +49,8 @@ type WDCommands() =
           match name with
           | null ->
             do! this.DBHandler.SetUserName(ctx.Guild.Id, targetId, null)
-            let! guildMember = this.DiscordCache.GetDiscordMemberAsync(ctx.Guild, ctx.User.Id)
-            let! _ = this.RespondReadAs(ctx, ctx.User.Id, Utils.getNicknameOrUsername guildMember)
+            let! guildMember = this.DiscordCache.GetDiscordMemberAsync(ctx.Guild, targetId)
+            let! _ = this.RespondReadAs(ctx, targetId, Utils.getNicknameOrUsername guildMember)
             return Ok()
           | name when (1 <= name.Length && name.Length <= maxLen) ->
             do! this.DBHandler.SetUserName(ctx.Guild.Id, targetId, name)
