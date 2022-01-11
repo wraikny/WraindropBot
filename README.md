@@ -1,6 +1,10 @@
 [![](https://github.com/wraikny/WraindropBot/workflows/CI/badge.svg)](https://github.com/wraikny/WraindropBot/actions?workflow=CI)
 # Wraindrop bot
 
+よくあるDiscord 読み上げbotです。
+
+[使い方ドキュメント](/doc/usage.md)
+
 ## Environment
 * .NET6 （開発環境）
 * ffmpeg
@@ -29,11 +33,28 @@ dotnet fake build
 dotnet fake build -t format
 ```
 
-### Publish for Raspbian
+### Publish build for Raspbian
 
 ```sh
 dotnet fake build -t publish.raspbian
 ```
+
+### Run
+
+#### Development
+
+```sh
+dotnet run --project src/WraindropBot <config-path>
+```
+
+#### Production
+
+```sh
+./WraindropBot <config-path>
+```
+
+SSHから`tmux`や`screen`等を使って実行するといいかんじ。
+
 
 ## RaspberryPiでAquesTalk Piをインストールする
 
