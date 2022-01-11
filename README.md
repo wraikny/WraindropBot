@@ -3,60 +3,17 @@
 
 ![](images/banner-small.png)
 
-よくあるDiscord 読み上げbotです。
+よくあるDiscordの読み上げbotです。
+WindowsとRaspberry Pi (Raspbian)で動作します。
 
-[使い方ドキュメント](/doc/usage.md)
+* [使い方ドキュメント](/doc/usage.md)
+* [開発用ドキュメント](/doc/dev.md)
 
 ## 環境
 * .NET6 （開発環境）
 * ffmpeg
-  * 例えば `sudo apt install ffmpeg` や `scoop install ffmpeg` などとする。
-* libsodium and Opus
-  * [ArticlesAudioVoiceNextPrerequisites - DSharpPlus](https://dsharpplus.github.io/articles/audio/voicenext/prerequisites.html)
+* libsodium and Opus（Raspberry Pi）
 * AquesTalk (Raspberry Pi)
-
-## 開発
-
-### setup
-
-```sh
-dotnet tool restore
-```
-
-### Build
-
-```sh
-dotnet fake build
-```
-
-### Format
-
-```sh
-dotnet fake build -t format
-```
-
-### Publish build for Raspbian
-
-```sh
-dotnet fake build -t publish.raspbian
-```
-
-### Run
-
-#### Development
-
-```sh
-dotnet run --project src/WraindropBot <config-path>
-```
-
-#### Production
-
-```sh
-./WraindropBot <config-path>
-```
-
-SSHから`tmux`や`screen`等を使って実行するといいかんじ。
-
 
 ## RaspberryPiでAquesTalk Piをインストールする
 
