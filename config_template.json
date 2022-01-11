@@ -1,7 +1,7 @@
 {
     "token": "",
     "commandPrefixes": [ "!wd" ],
-    "ignorePrefixes": [ "-" ],
+    "ignorePrefixes": [ "-", "!", "/", ":" ],
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
     "volume": 60
 }

@@ -1,1 +1,3 @@
-module WraindropBot.Database
+namespace WraindropBot
+
+type DatabaseHandler() = class end
