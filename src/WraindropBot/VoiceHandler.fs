@@ -7,6 +7,7 @@ open System
 open System.Diagnostics
 open System.Threading.Tasks
 open System.IO
+open System.Collections.Concurrent
 open System.Runtime.InteropServices
 open System.Text.RegularExpressions
 
@@ -18,6 +19,8 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
   let instantFields = services.GetService<InstantFields>()
 
   let textConverter = services.GetService<TextConverter>()
+
+  let speakingMessageIdDict = ConcurrentDictionary<uint64, uint64>()
 
   member private _.TextToBytesForWindows(text: string) : Task<byte []> =
     task {
@@ -116,16 +119,19 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
           Utils.logfn "Speak '%s'" msg
 
           try
+            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id) <> args.Message.Id do
+              do! Task.Yield()
+
             let txStream = conn.GetTransmitSink()
             do! this.TextToVoice(user, msg, txStream)
-
-            while conn.IsPlaying do
-              do! conn.WaitForPlaybackFinishAsync()
-
             do! conn.SendSpeakingAsync(true)
             do! txStream.FlushAsync()
             do! conn.WaitForPlaybackFinishAsync()
             do! conn.SendSpeakingAsync(false)
+
+            speakingMessageIdDict.TryRemove(args.Guild.Id)
+            |> ignore
+
             return Ok()
           with
           | e ->
@@ -145,18 +151,14 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
         if isNull conn |> not
            && (Some messageChannelId = registeredChannelId) then
           let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
-
-          Task.Run(fun () ->
-            task {
-              let! msg = textConverter.ConvertTextForSpeeching(user, args)
-
-              match msg with
-              | None -> return ()
-              | Some msg -> return! this.Speak(user, conn, args, msg)
-            }
-            :> Task
-          )
-          |> ignore
+          let! msg = textConverter.ConvertTextForSpeeching(user, args)
+          match msg with
+          | None -> ()
+          | Some msg ->
+            Task.Run(fun () ->
+              this.Speak(user, conn, args, msg)
+            )
+            |> ignore
       }
 
     Task.CompletedTask
