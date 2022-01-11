@@ -12,9 +12,9 @@ type WDConfig =
   { [<JsonField("token")>]
     token: string
     [<JsonField("commandPrefixes")>]
-    commandPrefixes: string[]
+    commandPrefixes: string []
     [<JsonField("ignorePrefixes")>]
-    ignorePrefixes: string[]
+    ignorePrefixes: string []
     [<JsonField("aquesTalkPath")>]
     aquesTalkPath: string
     [<JsonField("volume")>]
