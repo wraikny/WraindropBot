@@ -1,8 +1,9 @@
 module WraindropBot.Database
 
+open Microsoft.Data.Sqlite
+
 open System
 open System.Data
-open System.Data.SQLite
 open System.Text
 open System.Threading.Tasks
 open Dapper
@@ -10,13 +11,13 @@ open Dapper
 type ConnStr = ConnStr of string
 
 let createConnectionStr dataSource =
-  SQLiteConnectionStringBuilder(DataSource = dataSource)
+  SqliteConnectionStringBuilder(DataSource = dataSource)
     .ToString()
   |> ConnStr
 
 let private execute (ConnStr connStr) (sql: string) (param: obj) =
   task {
-    use conn = new SQLiteConnection(connStr)
+    use conn = new SqliteConnection(connStr)
     do! conn.OpenAsync()
     use! trans = conn.BeginTransactionAsync()
 
@@ -34,7 +35,7 @@ let private execute (ConnStr connStr) (sql: string) (param: obj) =
 
 let private query<'a> (ConnStr connStr) (sql: string) (param: obj) =
   task {
-    use conn = new SQLiteConnection(connStr)
+    use conn = new SqliteConnection(connStr)
     do! conn.OpenAsync()
     return! conn.QueryAsync<'a>(sql, param)
   }
