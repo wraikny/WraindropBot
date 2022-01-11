@@ -8,12 +8,9 @@ open System.Diagnostics
 open System.Threading.Tasks
 open System.IO
 open System.Collections.Concurrent
-open System.Runtime.InteropServices
-open System.Text.RegularExpressions
 
 open DSharpPlus.VoiceNext
 open DSharpPlus.EventArgs
-open DSharpPlus.Entities
 
 type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
   let instantFields = services.GetService<InstantFields>()
@@ -119,9 +116,6 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
           Utils.logfn "Speak '%s'" msg
 
           try
-            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id) <> args.Message.Id do
-              do! Task.Yield()
-
             let txStream = conn.GetTransmitSink()
             do! this.TextToVoice(user, msg, txStream)
             do! conn.SendSpeakingAsync(true)
@@ -129,13 +123,11 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
             do! conn.WaitForPlaybackFinishAsync()
             do! conn.SendSpeakingAsync(false)
 
-            speakingMessageIdDict.TryRemove(args.Guild.Id)
-            |> ignore
-
             return Ok()
           with
           | e ->
             do! conn.SendSpeakingAsync(false)
+
             raise e
             return Ok()
         }
@@ -152,11 +144,23 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
            && (Some messageChannelId = registeredChannelId) then
           let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
           let! msg = textConverter.ConvertTextForSpeeching(user, args)
+
+          while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
+                <> args.Message.Id do
+            do! Task.Yield()
+
           match msg with
           | None -> ()
           | Some msg ->
             Task.Run(fun () ->
-              this.Speak(user, conn, args, msg)
+              task {
+                try
+                  do! this.Speak(user, conn, args, msg)
+                finally
+                  speakingMessageIdDict.TryRemove(args.Guild.Id)
+                  |> ignore
+              }
+              :> Task
             )
             |> ignore
       }
