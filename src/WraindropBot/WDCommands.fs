@@ -1,6 +1,8 @@
 namespace WraindropBot
 
+open System.Diagnostics
 open System.Text
+open System.Threading
 open System.Threading.Tasks
 
 open DSharpPlus
@@ -9,6 +11,7 @@ open DSharpPlus.CommandsNext.Attributes
 open DSharpPlus.Entities
 open DSharpPlus.EventArgs
 open DSharpPlus.VoiceNext
+open DSharpPlus.VoiceNext.EventArgs
 
 open WraindropBot
 
@@ -238,6 +241,24 @@ type WDCommands() =
         }
       )
 
+  member this.OnUserLeft (channel: DiscordChannel) (conn: VoiceNextConnection) (args: VoiceUserLeaveEventArgs) =
+    let _ = Task.Run(fun () ->
+      task {
+        let voiceChannel = conn.TargetChannel
+        let users = voiceChannel.Users |> Seq.toArray
+        Utils.logfn "%A" users
+        Utils.logfn "%A" (users |> Seq.map (fun u -> u.IsCurrent || u.IsBot))
+        if users |> Seq.forall (fun u -> u.IsBot) then
+          conn.Disconnect()
+          this.InstantFields.Leaved(voiceChannel.GuildId.Value)
+          Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
+          let! _ = channel.SendMessageAsync($"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
+          ()
+      }
+      :> Task
+    )
+    Task.CompletedTask
+
   [<Command("join");
     Description("ボイスチャンネルに参加します。このコマンドを実行したテキストチャンネルに投稿された文章が自動で読み上げられます。");
     Aliases([| "j" |]);
@@ -278,6 +299,8 @@ type WDCommands() =
               let! conn = voiceNext.ConnectAsync(voiceChannel)
               Utils.logfn "Connected to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
               this.InstantFields.Joined(ctx.Guild.Id, ctx.Channel.Id)
+
+              conn.add_UserLeft (this.OnUserLeft ctx.Channel)
 
               let _ = conn.SendSpeakingAsync(false)
 
