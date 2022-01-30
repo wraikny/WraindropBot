@@ -241,7 +241,7 @@ type WDCommands() =
         }
       )
 
-  member this.OnUserLeft (channel: DiscordChannel) (conn: VoiceNextConnection) (args: VoiceUserLeaveEventArgs) =
+  member this.OnUserLeft (channel: DiscordChannel) (conn: VoiceNextConnection) (_args: VoiceUserLeaveEventArgs) =
     let _ =
       Task.Run(fun () ->
         task {
