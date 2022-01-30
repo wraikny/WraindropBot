@@ -242,21 +242,25 @@ type WDCommands() =
       )
 
   member this.OnUserLeft (channel: DiscordChannel) (conn: VoiceNextConnection) (args: VoiceUserLeaveEventArgs) =
-    let _ = Task.Run(fun () ->
-      task {
-        let voiceChannel = conn.TargetChannel
-        let users = voiceChannel.Users |> Seq.toArray
-        Utils.logfn "%A" users
-        Utils.logfn "%A" (users |> Seq.map (fun u -> u.IsCurrent || u.IsBot))
-        if users |> Seq.forall (fun u -> u.IsBot) then
-          conn.Disconnect()
-          this.InstantFields.Leaved(voiceChannel.GuildId.Value)
-          Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
-          let! _ = channel.SendMessageAsync($"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
-          ()
-      }
-      :> Task
-    )
+    let _ =
+      Task.Run(fun () ->
+        task {
+          let voiceChannel = conn.TargetChannel
+          let users = voiceChannel.Users |> Seq.toArray
+          Utils.logfn "%A" users
+          Utils.logfn "%A" (users |> Seq.map (fun u -> u.IsCurrent || u.IsBot))
+
+          if users |> Seq.forall (fun u -> u.IsBot) then
+            conn.Disconnect()
+            this.InstantFields.Leaved(voiceChannel.GuildId.Value)
+            Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
+
+            let! _ = channel.SendMessageAsync($"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
+            ()
+        }
+        :> Task
+      )
+
     Task.CompletedTask
 
   [<Command("join");
