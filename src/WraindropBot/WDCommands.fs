@@ -52,6 +52,7 @@ type WDCommands() =
           match name with
           | null ->
             let! result = this.DBHandler.SetUserName(ctx.Guild.Id, targetId, null)
+
             match result with
             | Ok _ ->
               let! guildMember = this.DiscordCache.GetDiscordMemberAsync(ctx.Guild, targetId)
@@ -60,6 +61,7 @@ type WDCommands() =
             | Error _ -> return Error "処理に失敗しました。"
           | name when (1 <= name.Length && name.Length <= maxLen) ->
             let! result = this.DBHandler.SetUserName(ctx.Guild.Id, targetId, name)
+
             match result with
             | Ok _ ->
               let! _ = this.RespondReadAs(ctx, targetId, name)
@@ -122,8 +124,7 @@ type WDCommands() =
 
             let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で<@!%d{ctx.User.Id}>の発話速度は`%d{speed}`です。")
             return Ok()
-          | Error _ ->
-            return Error "処理に失敗しました。"
+          | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
@@ -137,12 +138,12 @@ type WDCommands() =
       (fun () ->
         task {
           let! speed = this.DBHandler.SetUserSpeed(ctx.Guild.Id, ctx.User.Id, speed)
+
           match speed with
           | Ok speed ->
             let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で<@!%d{ctx.User.Id}>の発話速度は`%d{speed}`に設定されました。")
             return Ok()
-          | Error _ ->
-            return Error "処理に失敗しました。"
+          | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
@@ -156,6 +157,7 @@ type WDCommands() =
       (fun () ->
         task {
           let! words = this.DBHandler.GetWords(ctx.Guild.Id)
+
           match words with
           | Ok words ->
             let words = words |> Seq.toArray
@@ -183,8 +185,7 @@ type WDCommands() =
 
               let! _ = ctx.RespondAsync(res.ToString())
               return Ok()
-          | Error _ ->
-            return Error "処理に失敗しました。"
+          | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
@@ -223,12 +224,12 @@ type WDCommands() =
       (fun () ->
         task {
           let! result = this.DBHandler.SetWord(ctx.Guild.Id, word, replaced)
+
           match result with
           | Ok _ ->
             let! _ = ctx.RespondAsync($"ワードを登録しました。\n**%s{ctx.Guild.Name}**で`%s{word}`は`%s{replaced}`に置換されます。")
             return Ok()
-          | Error _ ->
-            return Error "処理に失敗しました。"
+          | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
@@ -247,10 +248,8 @@ type WDCommands() =
           | Ok true ->
             let! _ = ctx.RespondAsync($"`%s{word}`を**%s{ctx.Guild.Name}**の辞書から削除しました。")
             return Ok()
-          | Ok _ ->
-            return Error($"`%s{word}`は**%s{ctx.Guild.Name}**の辞書に登録されていません。")
-          | Error _ ->
-            return Error "処理に失敗しました。"
+          | Ok _ -> return Error($"`%s{word}`は**%s{ctx.Guild.Name}**の辞書に登録されていません。")
+          | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
@@ -261,6 +260,7 @@ type WDCommands() =
       (fun () ->
         task {
           let! deletedCount = this.DBHandler.DeleteWords(ctx.Guild.Id)
+
           match deletedCount with
           | Ok deletedCount ->
             let! _ = ctx.RespondAsync($"%d{deletedCount}件のワードを**%s{ctx.Guild.Name}**の辞書から削除しました。")

@@ -40,7 +40,8 @@ let private query<'a> (ConnStr connStr) (sql: string) (param: obj) =
       do! conn.OpenAsync()
       let! res = conn.QueryAsync<'a>(sql, param)
       return Ok res
-    with e ->
+    with
+    | e ->
       Utils.logfn "%s" e.Message
       return Error e.Message
   }
@@ -103,9 +104,7 @@ type DatabaseHandler(connStr: ConnStr) =
           "select * from users where guildId = @guildId and userId = @userId;"
           {| guildId = guildId; userId = userId |}
 
-      return
-        user
-        |> Result.map Seq.tryHead
+      return user |> Result.map Seq.tryHead
     }
 
   member _.SetUserName(guildId: uint64, userId: uint64, name: string) =
@@ -140,9 +139,9 @@ do update
     execute
       connStr
       sql
-      {|guildId = guildId
-        userId = userId
-        speakingSpeed = speed |}
+      {| guildId = guildId
+         userId = userId
+         speakingSpeed = speed |}
 
   member _.GetWords(guildId: uint64) =
     query<Word> connStr "select * from words where guildId = @guildId;" {| guildId = guildId |}

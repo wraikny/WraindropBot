@@ -67,7 +67,8 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
         |> ignore
 
-      let s = $"%s{author.name}, %s{msgBuilder.ToString()}"
+      let s =
+        $"%s{author.name}, %s{msgBuilder.ToString()}"
 
       if s.Length > wdConfig.speechMaxStringLength + 1 then
         return s.[0..wdConfig.speechMaxStringLength] + ",省略"

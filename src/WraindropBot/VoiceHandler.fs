@@ -63,10 +63,10 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
 
       return Some <| output.ToArray()
-      // if reader.IsCompleted && writer.IsCompleted then
-      //   return Some <| output.ToArray()
-      // else
-      //   return None
+    // if reader.IsCompleted && writer.IsCompleted then
+    //   return Some <| output.ToArray()
+    // else
+    //   return None
     }
 
   member private this.TextToBytes(_user: Database.User, text: string) : Task<Option<byte []>> =
@@ -102,15 +102,17 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
             )
           )
 
-        let reader = task {
-          do! ffmpeg.StandardOutput.BaseStream.CopyToAsync(outStream)
-          ffmpeg.StandardOutput.Close()
-        }
+        let reader =
+          task {
+            do! ffmpeg.StandardOutput.BaseStream.CopyToAsync(outStream)
+            ffmpeg.StandardOutput.Close()
+          }
 
-        let writer = task {
-          do! ffmpeg.StandardInput.BaseStream.WriteAsync(bytes, 0, bytes.Length)
-          ffmpeg.StandardInput.Close()
-        }
+        let writer =
+          task {
+            do! ffmpeg.StandardInput.BaseStream.WriteAsync(bytes, 0, bytes.Length)
+            ffmpeg.StandardInput.Close()
+          }
 
         let! _ = Task.WhenAll(reader, writer)
         ()
