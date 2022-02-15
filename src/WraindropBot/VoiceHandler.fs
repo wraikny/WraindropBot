@@ -5,6 +5,7 @@ open Microsoft.Extensions.DependencyInjection
 
 open System
 open System.Diagnostics
+open System.Threading
 open System.Threading.Tasks
 open System.IO
 open System.Collections.Concurrent
@@ -19,16 +20,16 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
   let speakingMessageIdDict = ConcurrentDictionary<uint64, uint64>()
 
-  member private _.TextToBytesForWindows(text: string) : Task<byte []> =
+  member private _.TextToBytesForWindows(text: string) : Task<Option<byte []>> =
     task {
       use synth = new Speech.Synthesis.SpeechSynthesizer()
       use stream = new MemoryStream()
       synth.SetOutputToWaveStream(stream)
       synth.Speak(text)
-      return stream.ToArray()
+      return stream.ToArray() |> Some
     }
 
-  member private this.TextToBytesForAquesTalk(user: Database.User, text: string) : Task<byte []> =
+  member private this.TextToBytesForAquesTalk(user: Database.User, text: string) : Task<Option<byte []>> =
     task {
       let voiceKind = "f1"
 
@@ -58,11 +59,17 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
           aquesTalk.StandardInput.Close()
         }
 
-      let! _ = Task.WhenAll(writer, reader)
-      return output.ToArray()
+      let! _ = Task.WhenAll(reader, writer)
+
+
+      return Some <| output.ToArray()
+      // if reader.IsCompleted && writer.IsCompleted then
+      //   return Some <| output.ToArray()
+      // else
+      //   return None
     }
 
-  member private this.TextToBytes(_user: Database.User, text: string) : Task<byte []> =
+  member private this.TextToBytes(_user: Database.User, text: string) : Task<Option<byte []>> =
 #if OS_RASPBIAN
     this.TextToBytesForAquesTalk(_user, text)
 #else
@@ -81,31 +88,32 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     task {
       let! bytes = this.TextToBytes(user, text)
 
-      use ffmpeg =
-        Process.Start(
-          ProcessStartInfo(
-            FileName = "ffmpeg",
-            Arguments = "-i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1",
-            RedirectStandardInput = true,
-            RedirectStandardOutput = true,
-            UseShellExecute = false
+      match bytes with
+      | None -> ()
+      | Some bytes ->
+        use ffmpeg =
+          Process.Start(
+            ProcessStartInfo(
+              FileName = "ffmpeg",
+              Arguments = "-i pipe:0 -ac 2 -f s16le -ar 48000 pipe:1",
+              RedirectStandardInput = true,
+              RedirectStandardOutput = true,
+              UseShellExecute = false
+            )
           )
-        )
 
-      let reader =
-        task {
+        let reader = task {
           do! ffmpeg.StandardOutput.BaseStream.CopyToAsync(outStream)
           ffmpeg.StandardOutput.Close()
         }
 
-      let writer =
-        task {
+        let writer = task {
           do! ffmpeg.StandardInput.BaseStream.WriteAsync(bytes, 0, bytes.Length)
           ffmpeg.StandardInput.Close()
         }
 
-      let! _ = Task.WhenAll(writer, reader)
-      ()
+        let! _ = Task.WhenAll(reader, writer)
+        ()
     }
 
   member private this.Speak(user: Database.User, conn: VoiceNextConnection, args: MessageCreateEventArgs, msg: string) =
@@ -136,27 +144,44 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     let messageChannelId = args.Channel.Id
     let registeredChannelId = instantFields.GetChannel(args.Guild.Id)
 
-    let _ =
-      task {
+    let msg = args.Message.Content
 
-        if isNull conn |> not
-           && (Some messageChannelId = registeredChannelId) then
-          let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
-          let! msg = textConverter.ConvertTextForSpeeching(user, args)
+    if
+      not
+        (
+          args.Author.IsCurrent
+          || args.Author.IsBot
+          || (args.MentionedUsers.Count <> 0
+              && args.MentionedUsers
+                 |> Seq.forall (fun x -> x.IsBot))
+          || wdConfig.commandPrefixes
+             |> Seq.exists msg.StartsWith
+          || wdConfig.ignorePrefixes
+             |> Seq.exists msg.StartsWith
+        )
+    then
+      Utils.handleError
+        args.Message.RespondAsync
+        (fun () ->
+          task {
+            if isNull conn |> not
+               && (Some messageChannelId = registeredChannelId) then
+              let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
+              let! msg = textConverter.ConvertTextForSpeeching(user, args)
 
+              while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
+                    <> args.Message.Id do
+                do! Task.Yield()
 
-          match msg with
-          | None -> ()
-          | Some msg ->
-            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
-                  <> args.Message.Id do
-              do! Task.Yield()
+              try
+                do! this.Speak(user, conn, args, msg)
+              finally
+                speakingMessageIdDict.TryRemove(args.Guild.Id)
+                |> ignore
 
-            try
-              do! this.Speak(user, conn, args, msg)
-            finally
-              speakingMessageIdDict.TryRemove(args.Guild.Id)
-              |> ignore
-      }
+            return Ok()
+          }
+        )
+      |> ignore
 
     Task.CompletedTask

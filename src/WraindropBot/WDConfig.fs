@@ -21,6 +21,8 @@ type WDConfig =
     dictionaryMaxLength: int
     [<JsonField("requestCacheSeconds")>]
     requestCacheSeconds: int
+    [<JsonField("speechMaxStringLength")>]
+    speechMaxStringLength: int
     [<JsonField("aquesTalkPath")>]
     aquesTalkPath: string
     [<JsonField("volume")>]
