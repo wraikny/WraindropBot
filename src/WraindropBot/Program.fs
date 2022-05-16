@@ -6,6 +6,7 @@ open System
 open System.Threading.Tasks
 
 open DSharpPlus
+open DSharpPlus.Entities
 open DSharpPlus.VoiceNext
 open DSharpPlus.CommandsNext
 
@@ -56,7 +57,7 @@ module Program =
 
           let commandsConfig =
             CommandsNextConfiguration(
-              EnableMentionPrefix = true,
+              EnableMentionPrefix = (wdConfig.commandPrefixes |> Array.isEmpty |> not),
               StringPrefixes = wdConfig.commandPrefixes,
               Services = services
             )
@@ -68,6 +69,20 @@ module Program =
           let voice = client.UseVoiceNext()
 
           let voiceHandler = new VoiceHandler(wdConfig, services)
+
+          client.add_Ready (fun client _args ->
+            task {
+              Utils.logfn "Set Status"
+
+              let activity =
+                wdConfig.commandPrefixes
+                |> function
+                  | [||] -> $"@%s{client.CurrentUser.Username} help"
+                  | ps -> $"%s{ps.[0]} help"
+
+              do! client.UpdateStatusAsync(new DiscordActivity(activity))
+            }
+          )
 
           client.add_MessageCreated (fun client args ->
             let conn = voice.GetConnection(args.Guild)
