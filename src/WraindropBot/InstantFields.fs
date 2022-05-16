@@ -6,6 +6,8 @@ open System.Collections.Generic
 type InstantFields() =
   let channelDict = Dictionary<uint64, uint64>()
 
+  member _.ConnectedVoiceChannels = channelDict :> IReadOnlyDictionary<_, _>
+
   member _.GetChannel(guildId) =
     channelDict.TryGetValue(guildId)
     |> function

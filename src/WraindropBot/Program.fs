@@ -85,8 +85,11 @@ module Program =
           )
 
           client.add_MessageCreated (fun client args ->
-            let conn = voice.GetConnection(args.Guild)
-            voiceHandler.OnReceived(conn, args)
+            if isNull args.Guild then
+              Task.CompletedTask
+            else
+              let conn = voice.GetConnection(args.Guild)
+              voiceHandler.OnReceived(conn, args)
           )
 
           Utils.logfn "Connectiong"

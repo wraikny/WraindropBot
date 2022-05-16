@@ -388,3 +388,30 @@ type WDCommands() =
               return Ok()
         }
       )
+
+  [<Command("status"); RequireOwner; RequireDirectMessage>]
+  member this.Status(ctx: CommandContext) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          let guilds =
+            ctx.Client.Guilds
+            |> Seq.map (fun g ->
+              this.InstantFields.ConnectedVoiceChannels.ContainsKey(g.Key)
+              |> function
+                | true -> $":sound: %s{g.Value.Name}"
+                | false -> $":mute: %s{g.Value.Name}"
+            )
+            |> Seq.toArray
+            |> String.concat "\n"
+
+          let embed =
+            DiscordEmbedBuilder(Title = "Status")
+              .AddField("サーバー一覧", guilds, false)
+              .Build()
+
+          do! ctx.RespondAsync(embed) :> Task
+          return Ok()
+        }
+      )
