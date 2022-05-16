@@ -125,8 +125,6 @@ do update
          name = name |}
 
   member _.SetUserSpeed(guildId: uint64, userId: uint64, speed: int) =
-    let speed = speed |> WDConfig.validateSpeed
-
     let sql =
       """
 insert into users (userId, guildId, speakingSpeed)

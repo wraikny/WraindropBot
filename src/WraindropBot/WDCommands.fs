@@ -137,10 +137,11 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
-          let! speed = this.DBHandler.SetUserSpeed(ctx.Guild.Id, ctx.User.Id, speed)
+          let speed = speed |> WDConfig.validateSpeed
+          let! res = this.DBHandler.SetUserSpeed(ctx.Guild.Id, ctx.User.Id, speed)
 
-          match speed with
-          | Ok speed ->
+          match res with
+          | Ok _ ->
             let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で<@!%d{ctx.User.Id}>の発話速度は`%d{speed}`に設定されました。")
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
