@@ -265,7 +265,10 @@ type WDCommands() =
         }
       )
 
-  [<Command("dict-clear"); Description("読み上げ時に置換されるワードをすべて削除します。"); RequireGuild; RequireBotPermissions(Permissions.SendMessages)>]
+  [<Command("dict-clear");
+    Description("読み上げ時に置換されるワードをすべて削除します。");
+    RequireGuild;
+    RequireBotPermissions(Permissions.SendMessages)>]
   member this.ClearWords(ctx: CommandContext) =
     Utils.handleError
       ctx.RespondAsync
