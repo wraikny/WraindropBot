@@ -30,6 +30,7 @@ type WDCommands() =
   [<Command("name-get");
     Description("サーバーで読み上げる名前を取得します。");
     Aliases([| "ng" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.GetName(ctx: CommandContext) =
     Utils.handleError
@@ -74,6 +75,7 @@ type WDCommands() =
   [<Command("name-set");
     Description("サーバーで読み上げる名前を設定します。");
     Aliases([| "ns" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetName(ctx: CommandContext, [<Description("読み上げる名前")>] name: string) =
     this.SetName(ctx, ctx.User.Id, name)
@@ -81,6 +83,7 @@ type WDCommands() =
   [<Command("name-set-user");
     Description("サーバーで指定したユーザを読み上げる名前を設定します。");
     Aliases([| "nsu" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetName
     (
@@ -93,12 +96,14 @@ type WDCommands() =
   [<Command("name-delete");
     Description("サーバーで読み上げる名前を消去します。");
     Aliases([| "nd" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.DeleteName(ctx: CommandContext) = this.SetName(ctx, ctx.User.Id, null)
 
   [<Command("name-delete-user");
     Description("サーバーで指定したユーザを読み上げる名前を消去します。");
     Aliases([| "ndu" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.DeleteName(ctx: CommandContext, [<Description("対象のユーザ")>] target: DiscordMember) =
     this.SetName(ctx, target.Id, null)
@@ -106,6 +111,7 @@ type WDCommands() =
   [<Command("speed-get");
     Description("サーバーでの発話速度を取得します。");
     Aliases([| "sg" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.GetSpeed(ctx: CommandContext) =
     Utils.handleError
@@ -131,6 +137,7 @@ type WDCommands() =
   [<Command("speed-set");
     Description("サーバーでの発話速度を設定します。(50~300)");
     Aliases([| "ss" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.SetSpeed(ctx: CommandContext, [<Description("発話速度")>] speed: int) =
     Utils.handleError
@@ -151,6 +158,7 @@ type WDCommands() =
   [<Command("dict-list");
     Description("読み上げ時に置換されるワードの一覧を取得します。");
     Aliases([| "dl" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.ListWords(ctx: CommandContext) =
     Utils.handleError
@@ -193,6 +201,7 @@ type WDCommands() =
   [<Command("dict-get");
     Description("読み上げ時に置換されるワードを取得します。");
     Aliases([| "dg" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.GetWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
     Utils.handleError
@@ -213,6 +222,7 @@ type WDCommands() =
   [<Command("dict-set");
     Description("読み上げ時に置換されるワードを追加・更新します。");
     Aliases([| "ds" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.AddWord
     (
@@ -237,6 +247,7 @@ type WDCommands() =
   [<Command("dict-delete");
     Description("読み上げ時に置換されるワードを削除します。");
     Aliases([| "dd" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.DeleteWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
     Utils.handleError
@@ -254,7 +265,7 @@ type WDCommands() =
         }
       )
 
-  [<Command("dict-clear"); Description("読み上げ時に置換されるワードをすべて削除します。"); RequireBotPermissions(Permissions.SendMessages)>]
+  [<Command("dict-clear"); Description("読み上げ時に置換されるワードをすべて削除します。"); RequireGuild; RequireBotPermissions(Permissions.SendMessages)>]
   member this.ClearWords(ctx: CommandContext) =
     Utils.handleError
       ctx.RespondAsync
@@ -274,6 +285,7 @@ type WDCommands() =
     let _ =
       Task.Run(fun () ->
         task {
+          do! Task.Yield()
           let voiceChannel = conn.TargetChannel
           let users = voiceChannel.Users |> Seq.toArray
           Utils.logfn "%A" users
@@ -295,6 +307,7 @@ type WDCommands() =
   [<Command("join");
     Description("ボイスチャンネルに参加します。このコマンドを実行したテキストチャンネルに投稿された文章が自動で読み上げられます。");
     Aliases([| "j" |]);
+    RequireGuild;
     RequireBotPermissions(Permissions.SendMessages
                           ||| Permissions.UseVoice
                           ||| Permissions.Speak)>]
@@ -346,7 +359,7 @@ type WDCommands() =
         }
       )
 
-  [<Command("leave"); Description("ボイスチャンネルから切断します。"); Aliases([| "l" |])>]
+  [<Command("leave"); Description("ボイスチャンネルから切断します。"); Aliases([| "l" |]); RequireGuild>]
   member this.Leave(ctx: CommandContext) =
     Utils.handleError
       ctx.RespondAsync
