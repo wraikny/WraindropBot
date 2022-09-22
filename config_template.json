@@ -9,5 +9,8 @@
     "requestCacheSeconds": 300,
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
     "volume": 60,
-    "defaultSpeed": 100
+    "defaultSpeed": 100,
+    "ignoredStrings": [
+        "～"
+    ]
 }

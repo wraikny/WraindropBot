@@ -39,7 +39,13 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         |> Seq.map (fun u -> this.GetUserWithValidName(args.Guild, u.Id))
         |> Seq.toArray
 
-      let msgBuilder = Text.StringBuilder(msg)
+      let msgBuilder = Text.StringBuilder()
+
+      msgBuilder
+        .Append(author.name)
+        .Append(", ")
+        .Append(msg)
+      |> ignore
 
       msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
       |> ignore
@@ -67,11 +73,13 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
         |> ignore
 
-      let s =
-        $"%s{author.name}, %s{msgBuilder.ToString()}"
+      for ignoredString in wdConfig.ignoredStrings do
+        msgBuilder.Replace(ignoredString, "") |> ignore
+
+      let s = msgBuilder.ToString()
 
       if s.Length > wdConfig.speechMaxStringLength + 1 then
-        return s.[0..wdConfig.speechMaxStringLength] + ",省略"
+        return s + ",省略"
       else
         return s
     }

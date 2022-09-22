@@ -28,7 +28,9 @@ type WDConfig =
     [<JsonField("volume")>]
     volume: int
     [<JsonField("defaultSpeed")>]
-    defaultSpeed: int }
+    defaultSpeed: int
+    [<JsonField("ignoredStrings")>]
+    ignoredStrings: string [] }
 
 
 [<RequireQualifiedAccess>]

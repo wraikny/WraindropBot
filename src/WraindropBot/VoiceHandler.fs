@@ -61,12 +61,11 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
       let! _ = Task.WhenAll(reader, writer)
 
-
-      return Some <| output.ToArray()
-    // if reader.IsCompleted && writer.IsCompleted then
-    //   return Some <| output.ToArray()
-    // else
-    //   return None
+      return
+        if aquesTalk.ExitCode = 0 then
+          Some <| output.ToArray()
+        else
+          None
     }
 
   member private this.TextToBytes(_user: Database.User, text: string) : Task<Option<byte []>> =

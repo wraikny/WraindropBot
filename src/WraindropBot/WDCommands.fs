@@ -1,9 +1,13 @@
 namespace WraindropBot
 
+open System
 open System.Diagnostics
 open System.Text
 open System.Threading
 open System.Threading.Tasks
+open System.ComponentModel
+open System.Runtime.CompilerServices
+
 
 open DSharpPlus
 open DSharpPlus.CommandsNext
@@ -37,6 +41,7 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
           let! user = this.TextConverter.GetUserWithValidName(ctx.Guild, ctx.User.Id)
           let! _ = this.RespondReadAs(ctx, ctx.User.Id, user.name)
           return Ok()
@@ -48,6 +53,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let maxLen = this.WDConfig.usernameMaxLength
 
           match name with
@@ -118,6 +125,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! user = this.DBHandler.GetUser(ctx.Guild.Id, ctx.User.Id)
 
           match user with
@@ -144,6 +153,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let speed = speed |> WDConfig.validateSpeed
           let! res = this.DBHandler.SetUserSpeed(ctx.Guild.Id, ctx.User.Id, speed)
 
@@ -165,6 +176,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! words = this.DBHandler.GetWords(ctx.Guild.Id)
 
           match words with
@@ -208,6 +221,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! dbWord = this.DBHandler.GetWord(ctx.Guild.Id, word)
 
           match dbWord with
@@ -234,6 +249,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! result = this.DBHandler.SetWord(ctx.Guild.Id, word, replaced)
 
           match result with
@@ -254,6 +271,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! deleted = this.DBHandler.DeleteWord(ctx.Guild.Id, word)
 
           match deleted with
@@ -274,6 +293,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let! deletedCount = this.DBHandler.DeleteWords(ctx.Guild.Id)
 
           match deletedCount with
@@ -288,7 +309,6 @@ type WDCommands() =
     let _ =
       Task.Run(fun () ->
         task {
-          do! Task.Yield()
           let voiceChannel = conn.TargetChannel
           let users = voiceChannel.Users |> Seq.toArray
           Utils.logfn "%A" users
@@ -319,6 +339,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let voiceNext = ctx.Client.GetVoiceNext()
 
           if isNull voiceNext then
@@ -368,6 +390,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let voiceNext = ctx.Client.GetVoiceNext()
 
           if isNull voiceNext then
@@ -395,6 +419,8 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let guilds =
             ctx.Client.Guilds
             |> Seq.map (fun g ->
