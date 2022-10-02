@@ -142,47 +142,45 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
       )
 
   member this.OnReceived(conn: VoiceNextConnection, args: MessageCreateEventArgs) =
-    let messageChannelId = args.Channel.Id
-    let registeredChannelId = instantFields.GetChannel(args.Guild.Id)
+    Utils.handleError
+      args.Message.RespondAsync
+      (fun () ->
+        task {
+          let messageChannelId = args.Channel.Id
+          let registeredChannelId = instantFields.GetChannel(args.Guild.Id)
+          let msg = args.Message.Content
+          if
+            not
+              (
+                args.Author.IsCurrent
+                || args.Author.IsBot
+                || (args.MentionedUsers.Count <> 0
+                    && args.MentionedUsers
+                      |> Seq.forall (fun x -> x.IsBot))
+                || wdConfig.commandPrefixes
+                  |> Seq.exists msg.StartsWith
+                || wdConfig.ignorePrefixes
+                  |> Seq.exists msg.StartsWith
+                || isNull conn
+                || registeredChannelId |> Option.is ((=) messageChannelId) |> not
+              )
+          then
+            let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
+            let! msg = textConverter.ConvertTextForSpeeching(user, args)
 
-    let msg = args.Message.Content
+            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
+                  <> args.Message.Id do
+              do! Task.Yield()
 
-    if
-      not
-        (
-          args.Author.IsCurrent
-          || args.Author.IsBot
-          || (args.MentionedUsers.Count <> 0
-              && args.MentionedUsers
-                 |> Seq.forall (fun x -> x.IsBot))
-          || wdConfig.commandPrefixes
-             |> Seq.exists msg.StartsWith
-          || wdConfig.ignorePrefixes
-             |> Seq.exists msg.StartsWith
-        )
-    then
-      Utils.handleError
-        args.Message.RespondAsync
-        (fun () ->
-          task {
-            if isNull conn |> not
-               && (Some messageChannelId = registeredChannelId) then
-              let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
-              let! msg = textConverter.ConvertTextForSpeeching(user, args)
+            try
+              do! this.Speak(user, conn, args, msg)
+            finally
+              speakingMessageIdDict.TryRemove(args.Guild.Id)
+              |> ignore
 
-              while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
-                    <> args.Message.Id do
-                do! Task.Yield()
-
-              try
-                do! this.Speak(user, conn, args, msg)
-              finally
-                speakingMessageIdDict.TryRemove(args.Guild.Id)
-                |> ignore
-
-            return Ok()
-          }
-        )
-      |> ignore
+          return Ok()
+        }
+      )
+    |> ignore
 
     Task.CompletedTask
