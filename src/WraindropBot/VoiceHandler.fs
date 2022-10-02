@@ -150,7 +150,9 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
     if
       not
         (
-          args.Author.IsCurrent
+          (isNull conn)
+          || (registeredChannelId |> Option.is ((=) messageChannelId) |> not)
+          || args.Author.IsCurrent
           || args.Author.IsBot
           || (args.MentionedUsers.Count <> 0
               && args.MentionedUsers
@@ -165,20 +167,18 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
         args.Message.RespondAsync
         (fun () ->
           task {
-            if isNull conn |> not
-               && (Some messageChannelId = registeredChannelId) then
-              let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
-              let! msg = textConverter.ConvertTextForSpeeching(user, args)
+            let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
+            let! msg = textConverter.ConvertTextForSpeeching(user, args)
 
-              while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
-                    <> args.Message.Id do
-                do! Task.Yield()
+            while speakingMessageIdDict.GetOrAdd(args.Guild.Id, args.Message.Id)
+                  <> args.Message.Id do
+              do! Task.Delay(100)
 
-              try
-                do! this.Speak(user, conn, args, msg)
-              finally
-                speakingMessageIdDict.TryRemove(args.Guild.Id)
-                |> ignore
+            try
+              do! this.Speak(user, conn, args, msg)
+            finally
+              speakingMessageIdDict.TryRemove(args.Guild.Id)
+              |> ignore
 
             return Ok()
           }
