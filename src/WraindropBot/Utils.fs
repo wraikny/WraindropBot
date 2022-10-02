@@ -54,7 +54,10 @@ module Extension =
   open System.Text.RegularExpressions
 
   module Option =
-    let is f = function Some x when f x -> true | _ -> false
+    let is f =
+      function
+      | Some x when f x -> true
+      | _ -> false
 
   type StringBuilder with
     member this.Replace(regex: Regex, replace: string) =
