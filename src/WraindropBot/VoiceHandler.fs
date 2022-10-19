@@ -158,15 +158,15 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
                   || args.Author.IsBot
                   || (args.MentionedUsers.Count <> 0
                       && args.MentionedUsers
-                        |> Seq.forall (fun x -> x.IsBot))
+                         |> Seq.forall (fun x -> x.IsBot))
                   || wdConfig.commandPrefixes
-                    |> Seq.exists msg.StartsWith
+                     |> Seq.exists msg.StartsWith
                   || wdConfig.ignorePrefixes
-                    |> Seq.exists msg.StartsWith
+                     |> Seq.exists msg.StartsWith
                   || isNull conn
                   || registeredChannelId
-                    |> Option.is ((=) messageChannelId)
-                    |> not
+                     |> Option.is ((=) messageChannelId)
+                     |> not
                 )
             then
               let! user = textConverter.GetUserWithValidName(args.Guild, args.Author.Id)
