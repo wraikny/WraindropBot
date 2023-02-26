@@ -81,7 +81,7 @@ module Program =
 
           client.add_Ready (fun client _args ->
             task {
-              Utils.logfn "Set Status"
+              Utils.logfn "Setting Status"
 
               let activity =
                 wdConfig.commandPrefixes
@@ -90,6 +90,8 @@ module Program =
                   | ps -> $"%s{ps.[0]} help"
 
               do! client.UpdateStatusAsync(new DiscordActivity(activity))
+
+              Utils.logfn "Clients Ready!"
             }
           )
 
@@ -104,6 +106,8 @@ module Program =
           Utils.logfn "Connectiong"
 
           do! client.ConnectAsync() |> Async.AwaitTask
+
+          Utils.logfn "Connected"
 
           while true do
             do! Async.Sleep(wdConfig.requestCacheSeconds)
