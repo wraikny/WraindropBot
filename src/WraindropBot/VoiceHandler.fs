@@ -61,6 +61,8 @@ type VoiceHandler(wdConfig: WDConfig, services: ServiceProvider) =
 
       let! _ = Task.WhenAll(reader, writer)
 
+      do! aquesTalk.WaitForExitAsync()
+
       return
         if aquesTalk.ExitCode = 0 then
           Some <| output.ToArray()
