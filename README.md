@@ -8,6 +8,7 @@ WindowsとRaspberry Pi (Raspbian)で動作します。
 
 * [使い方ドキュメント](/doc/usage.md)
 * [開発用ドキュメント](/doc/dev.md)
+* [Discord botの設定](/doc/bot_settings.md)
 
 ## 環境
 * .NET6 （開発環境）
