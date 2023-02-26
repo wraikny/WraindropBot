@@ -413,6 +413,23 @@ type WDCommands() =
         }
       )
 
+  [<Command("url"); RequireOwner; RequireDirectMessage>]
+  member this.Url(ctx: CommandContext) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          let clientId = ctx.Client.CurrentUser.Id
+          let permissions = 274881072128uL
+
+          let url =
+            $"https://discord.com/api/oauth2/authorize?client_id=%d{clientId}&permissions=%d{permissions}&scope=bot"
+
+          do! ctx.RespondAsync(url) :> Task
+          return Ok()
+        }
+      )
+
   [<Command("status"); RequireOwner; RequireDirectMessage>]
   member this.Status(ctx: CommandContext) =
     Utils.handleError
@@ -424,10 +441,13 @@ type WDCommands() =
           let guilds =
             ctx.Client.Guilds
             |> Seq.map (fun g ->
-              this.InstantFields.ConnectedVoiceChannels.ContainsKey(g.Key)
-              |> function
-                | true -> $":sound: %s{g.Value.Name}"
-                | false -> $":mute: %s{g.Value.Name}"
+              let emoji =
+                if this.InstantFields.ConnectedVoiceChannels.ContainsKey(g.Key) then
+                  ":sound:"
+                else
+                  ":mute:"
+
+              $"%s{emoji} %s{g.Value.Name}: %d{g.Key}"
             )
             |> Seq.toArray
             |> String.concat "\n"
@@ -438,6 +458,26 @@ type WDCommands() =
               .Build()
 
           do! ctx.RespondAsync(embed) :> Task
+          return Ok()
+        }
+      )
+
+  [<Command("exit-server"); RequireOwner; RequireDirectMessage>]
+  member this.ExitServer(ctx: CommandContext, [<Description("サーバーID")>] guildId: uint64) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          let guild =
+            ctx.Client.Guilds
+            |> Seq.tryFind (fun g -> g.Key = guildId)
+
+          match guild with
+          | None -> do! ctx.RespondAsync("サーバーが見つかりませんでした。") :> Task
+          | Some g ->
+            do! g.Value.LeaveAsync()
+            do! ctx.RespondAsync($"%s{g.Value.Name}から退出しました。") :> Task
+
           return Ok()
         }
       )
