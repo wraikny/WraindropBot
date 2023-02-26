@@ -33,8 +33,17 @@ module Program =
             Database.setupDatabase dbConnStr
             |> Async.AwaitTask
 
+          // https://github.com/DSharpPlus/DSharpPlus/blob/master/DSharpPlus/DiscordIntents.cs
+
           let discordConfig =
-            DiscordConfiguration(Token = wdConfig.token, TokenType = TokenType.Bot, AutoReconnect = true)
+            DiscordConfiguration(
+              Token = wdConfig.token,
+              TokenType = TokenType.Bot,
+              AutoReconnect = true,
+              Intents =
+                (DiscordIntents.AllUnprivileged
+                 ||| DiscordIntents.MessageContents)
+            )
 
           use client = new DiscordClient(discordConfig)
 
