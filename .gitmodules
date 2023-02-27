@@ -1,0 +1,3 @@
+[submodule "lib/ntextcat"]
+	path = lib/ntextcat
+	url = https://github.com/ivanakcheurov/ntextcat.git
