@@ -8,6 +8,7 @@
     "dictionaryMaxLength": 32,
     "requestCacheSeconds": 300,
     "aquesTalkPath": "/home/pi/aquestalkpi/AquesTalkPi",
+    "speechMaxStringLength": 50,
     "volume": 60,
     "defaultSpeed": 100,
     "ignoredStrings": [

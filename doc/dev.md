@@ -62,7 +62,8 @@ WraindropBot.linux-arm
 cp config_template.json publish/config.json
 ```
 
-`config.json`にDiscord botのトークンを入力しておきます。
+`config.json`の`token`にDiscord botのトークンを入力しておきます。
+また、`translationUrl`に、Google App ScriptのURLを指定します。作成方法は[Google翻訳APIを無料で作る方法](https://qiita.com/satto_sann/items/be4177360a0bc3691fdf)と[google_translate_api.js](/scripts/google_translate_api.js)を参考にしてください。
 
 ### ラズパイにファイルを移す
 
