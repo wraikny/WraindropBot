@@ -27,6 +27,7 @@ type WDCommands() =
   member val DBHandler: Database.DatabaseHandler = null with get, set
   member val DiscordCache: DiscordCache = null with get, set
   member val TextConverter: TextConverter = null with get, set
+  member val LanguageTranslator: LanguageTranslator = null with get, set
 
   member private _.RespondReadAs(ctx: CommandContext, userId, name: string) =
     ctx.RespondAsync($"<@!%d{userId}>は**%s{ctx.Guild.Name}**で`%s{name}`と読み上げられます。")
@@ -302,6 +303,34 @@ type WDCommands() =
             let! _ = ctx.RespondAsync($"%d{deletedCount}件のワードを**%s{ctx.Guild.Name}**の辞書から削除しました。")
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
+        }
+      )
+
+  [<Command("translate");
+    Description("文章を翻訳します。\n言語コード: https://cloud.google.com/translate/docs/languages");
+    Aliases([| "t" |]);
+    RequireBotPermissions(Permissions.SendMessages)>]
+  member this.Translate
+    (
+      ctx: CommandContext,
+      [<Description("翻訳先の言語コード")>] target: string,
+      [<Description("翻訳する文章")>] text: string
+    ) =
+    Utils.handleError
+      ctx.RespondAsync
+      (fun () ->
+        task {
+          do! ctx.TriggerTypingAsync()
+
+          let! translated = this.LanguageTranslator.Translate(text, "", target)
+
+          match translated with
+          | Ok traslatedText ->
+            let! _ = ctx.RespondAsync(traslatedText)
+            return Ok()
+          | Error errorMessage ->
+            Utils.logfn "Failed to run command 'translate' with message '%s'" errorMessage
+            return Error "処理に失敗しました。"
         }
       )
 

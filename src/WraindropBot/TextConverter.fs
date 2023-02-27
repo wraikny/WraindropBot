@@ -13,6 +13,9 @@ open DSharpPlus.Entities
 
 [<AllowNullLiteral>]
 type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Database.DatabaseHandler) =
+
+  member val ServiceProvider: ServiceProvider = null with get, set
+
   member _.GetUserWithValidName(guild: DiscordGuild, userId) =
     task {
       let guildId = guild.Id
@@ -39,13 +42,9 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         |> Seq.map (fun u -> this.GetUserWithValidName(args.Guild, u.Id))
         |> Seq.toArray
 
-      let msgBuilder = Text.StringBuilder()
+      let msgBuilder = StringBuilder()
 
-      msgBuilder
-        .Append(author.name)
-        .Append(", ")
-        .Append(msg)
-      |> ignore
+      msgBuilder.Append(msg) |> ignore
 
       msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
       |> ignore
@@ -73,13 +72,41 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
         |> ignore
 
+      msgBuilder
+        .Replace("\r\n", ". ")
+        .Replace("\n", ". ")
+        .Replace("\r", ". ")
+      |> ignore
+
       for ignoredString in wdConfig.ignoredStrings do
         msgBuilder.Replace(ignoredString, "") |> ignore
 
-      let s = msgBuilder.ToString()
+      let convertedText = msgBuilder.ToString()
 
-      if s.Length > wdConfig.speechMaxStringLength + 1 then
-        return s + ",省略"
-      else
-        return s
+      let mutable textToSpeak = convertedText
+
+      let languageDetector =
+        this.ServiceProvider.GetService<LanguageDetector>()
+
+      let languageTranslator =
+        this.ServiceProvider.GetService<LanguageTranslator>()
+
+      if
+        not
+        <| languageDetector.DetectIsJapanese(convertedText)
+      then
+        let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
+
+        match translationResult with
+        | Error errorMsg -> Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
+        | Ok translatedText -> textToSpeak <- translatedText
+
+      let omittedText =
+        if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
+          textToSpeak.Substring(0, wdConfig.speechMaxStringLength)
+          + ", 省略"
+        else
+          textToSpeak
+
+      return sprintf "%s, %s" author.name omittedText
     }
