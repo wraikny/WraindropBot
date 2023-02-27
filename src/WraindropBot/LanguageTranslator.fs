@@ -21,10 +21,9 @@ type LanguageTranslator(wdConfig: WDConfig) =
     task {
       if not urlIsValid then
         return Error "translationUrl is not valid."
-      elif
-        Utils.Language.tryFindCode (source)
-        |> Option.isNone
-      then
+      elif source <> ""
+           && Utils.Language.tryFindCode (source)
+              |> Option.isNone then
         return Error $"invalid source '%s{source}'"
       elif
         Utils.Language.tryFindCode (target)
