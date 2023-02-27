@@ -46,7 +46,7 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
 
       msgBuilder.Append(msg) |> ignore
 
-      msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
+      msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "ゆーあーるえる")
       |> ignore
 
       let! words = dbHandler.GetWords(args.Guild.Id)
@@ -83,23 +83,31 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
 
       let convertedText = msgBuilder.ToString()
 
-      let mutable textToSpeak = convertedText
-
       let languageDetector =
         this.ServiceProvider.GetService<LanguageDetector>()
 
       let languageTranslator =
         this.ServiceProvider.GetService<LanguageTranslator>()
 
-      if
-        not
-        <| languageDetector.DetectIsJapanese(convertedText)
-      then
-        let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
+      let! textToSpeak = task {
+        if
+          languageDetector.DetectIsJapanese(convertedText)
+        then
+          return convertedText
+        else
+          do! args.Channel.TriggerTypingAsync()
+          let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
 
-        match translationResult with
-        | Error errorMsg -> Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
-        | Ok translatedText -> textToSpeak <- translatedText
+          match translationResult with
+          | Error errorMsg ->
+            Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
+            do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
+            return convertedText
+          | Ok translatedText ->
+            if translatedText.Length > wdConfig.speechMaxStringLength + 1 then
+              do! args.Message.RespondAsync($"全文:\n > %s{translatedText}") :> Task
+            return translatedText
+      }
 
       let omittedText =
         if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
