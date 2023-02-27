@@ -74,6 +74,12 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
         |> ignore
 
+      msgBuilder
+        .Replace("\r\n", ". ")
+        .Replace("\n", ". ")
+        .Replace("\r", ". ")
+        |> ignore
+
       for ignoredString in wdConfig.ignoredStrings do
         msgBuilder.Replace(ignoredString, "") |> ignore
 

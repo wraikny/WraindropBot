@@ -37,8 +37,4 @@
     <PackageReference Include="NTextCat" Version="0.3.65" />
     <PackageReference Include="System.Speech" Version="6.0.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\lib\ntextcat\src\NTextCat\NTextCat.csproj" />
-  </ItemGroup>
 </Project>

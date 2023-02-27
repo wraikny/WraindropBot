@@ -9,12 +9,16 @@ open NTextCat
 type LanguageDetector() =
   let factory = RankedLanguageIdentifierFactory()
 
-  let path = 
-    Path.Combine(
-      Assembly.GetExecutingAssembly().Location,
-      "..",
-      "LanguageModels/Core14.profile.xml"
-    )
+  let path =
+    let path = "LanguageModels/Core14.profile.xml"
+    if File.Exists(path) then
+      path
+    else
+      Path.Combine(
+        Assembly.GetExecutingAssembly().Location,
+        "..",
+        path
+      )
 
   do
     if File.Exists(path) |> not then
