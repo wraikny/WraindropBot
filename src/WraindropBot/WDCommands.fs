@@ -308,6 +308,7 @@ type WDCommands() =
 
   [<Command("translate");
     Description("文章を翻訳します。\n言語コード: https://cloud.google.com/translate/docs/languages");
+    Aliases([| "t" |]);
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.Translate
     (
@@ -327,7 +328,9 @@ type WDCommands() =
           | Ok traslatedText ->
             let! _ = ctx.RespondAsync(traslatedText)
             return Ok()
-          | Error errorMessage -> return Error "処理に失敗しました。"
+          | Error errorMessage ->
+            Utils.logfn "Failed to run command 'translate' with message '%s'" errorMessage
+            return Error "処理に失敗しました。"
         }
       )
 
