@@ -29,8 +29,26 @@ type WDCommands() =
   member val TextConverter: TextConverter = null with get, set
   member val LanguageTranslator: LanguageTranslator = null with get, set
 
+  member private this.GetPrefix(ctx: CommandContext) =
+    this.WDConfig.commandPrefixes
+    |> Array.tryHead
+    |> Option.defaultWith (fun () -> $"@%s{ctx.Client.CurrentUser.Username}")
+
   member private _.RespondReadAs(ctx: CommandContext, userId, name: string) =
-    ctx.RespondAsync($"<@!%d{userId}>は**%s{ctx.Guild.Name}**で`%s{name}`と読み上げられます。")
+    DiscordEmbedBuilder(Description = "読み上げ時に利用する名前です。")
+      .AddField("ユーザ", $"<@!%d{userId}>", true)
+      .AddField("読み上げ名", name, true)
+      .Build()
+    |> ctx.RespondAsync
+    :> Task
+
+  member private _.RespondSpeed(ctx: CommandContext, userId, speed: int) =
+    DiscordEmbedBuilder(Description = "読み上げる速さです。50 ~ 300で設定できます。")
+      .AddField("ユーザ", $"<@!%d{userId}>", true)
+      .AddField("発話速度", $"%d{speed}", true)
+      .Build()
+    |> ctx.RespondAsync
+    :> Task
 
   [<Command("name-get");
     Description("サーバーで読み上げる名前を取得します。");
@@ -44,7 +62,7 @@ type WDCommands() =
         task {
           do! ctx.TriggerTypingAsync()
           let! user = this.TextConverter.GetUserWithValidName(ctx.Guild, ctx.User.Id)
-          let! _ = this.RespondReadAs(ctx, ctx.User.Id, user.name)
+          do! this.RespondReadAs(ctx, ctx.User.Id, user.name)
           return Ok()
         }
       )
@@ -65,7 +83,7 @@ type WDCommands() =
             match result with
             | Ok _ ->
               let! guildMember = this.DiscordCache.GetDiscordMemberAsync(ctx.Guild, targetId)
-              let! _ = this.RespondReadAs(ctx, targetId, Utils.getNicknameOrUsername guildMember)
+              do! this.RespondReadAs(ctx, targetId, Utils.getNicknameOrUsername guildMember)
               return Ok()
             | Error _ -> return Error "処理に失敗しました。"
           | name when (1 <= name.Length && name.Length <= maxLen) ->
@@ -73,7 +91,7 @@ type WDCommands() =
 
             match result with
             | Ok _ ->
-              let! _ = this.RespondReadAs(ctx, targetId, name)
+              do! this.RespondReadAs(ctx, targetId, name)
               return Ok()
             | Error _ -> return Error "処理に失敗しました。"
           | _ -> return Error $"名前は1文字以上%d{maxLen}文字以下にしてください。"
@@ -138,7 +156,8 @@ type WDCommands() =
                 | Some { speakingSpeed = spd } -> spd
                 | _ -> this.WDConfig.defaultSpeed
 
-            let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で<@!%d{ctx.User.Id}>の発話速度は`%d{speed}`です。")
+            do! this.RespondSpeed(ctx, ctx.User.Id, speed)
+
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
         }
@@ -161,14 +180,15 @@ type WDCommands() =
 
           match res with
           | Ok _ ->
-            let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で<@!%d{ctx.User.Id}>の発話速度は`%d{speed}`に設定されました。")
+            do! this.RespondSpeed(ctx, ctx.User.Id, speed)
+
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
   [<Command("dict-list");
-    Description("読み上げ時に置換されるワードの一覧を取得します。");
+    Description("読み上げ時に置換される単語の一覧を取得します。");
     Aliases([| "dl" |]);
     RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
@@ -186,38 +206,34 @@ type WDCommands() =
             let words = words |> Seq.toArray
 
             if words.Length = 0 then
-              let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**の辞書にワードが登録されていません。")
+              do!
+                DiscordEmbedBuilder(Description = $"辞書に単語が登録されていません。")
+                  .Build()
+                |> ctx.RespondAsync
+                :> Task
+
               return Ok()
             else
-              let res = StringBuilder()
-
-              res
-                .AppendLine($"**%s{ctx.Guild.Name}**の辞書に登録されているワードの一覧です。")
-                .AppendLine("```")
-              |> ignore
+              let builder =
+                DiscordEmbedBuilder(Description = "辞書に登録されている単語の一覧です。")
 
               for w in words do
-                res
-                  .Append(w.word)
-                  .Append(" : ")
-                  .Append(w.replaced)
-                  .Append("\n")
+                builder.AddField(w.word, w.replaced, false)
                 |> ignore
 
-              res.AppendLine("```") |> ignore
+              do! builder.Build() |> ctx.RespondAsync :> Task
 
-              let! _ = ctx.RespondAsync(res.ToString())
               return Ok()
           | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
   [<Command("dict-get");
-    Description("読み上げ時に置換されるワードを取得します。");
+    Description("読み上げ時に置換される単語を取得します。");
     Aliases([| "dg" |]);
     RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.GetWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
+  member this.GetWord(ctx: CommandContext, [<Description("対象の単語")>] word: string) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
@@ -228,23 +244,30 @@ type WDCommands() =
 
           match dbWord with
           | Ok (Some w) ->
-            let! _ = ctx.RespondAsync($"**%s{ctx.Guild.Name}**で`%s{word}`は`%s{w.replaced}`に置換されます。")
+            do!
+              DiscordEmbedBuilder(Title = "読み上げ辞書")
+                .AddField("単語", word, true)
+                .AddField("置換後", w.replaced, true)
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
+
             return Ok()
-          | Ok (None) -> return Error $"`%s{word}`は**%s{ctx.Guild.Name}**の辞書に登録されていません。"
+          | Ok (None) -> return Error $"`%s{word}`は辞書に登録されていません。"
           | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
   [<Command("dict-set");
-    Description("読み上げ時に置換されるワードを追加・更新します。");
+    Description("読み上げ時に置換される単語を追加・更新します。");
     Aliases([| "ds" |]);
     RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.AddWord
     (
       ctx: CommandContext,
-      [<Description("対象のワード")>] word: string,
-      [<Description("置換するワード")>] replaced: string
+      [<Description("対象の単語")>] word: string,
+      [<Description("置換する単語")>] replaced: string
     ) =
     Utils.handleError
       ctx.RespondAsync
@@ -256,18 +279,25 @@ type WDCommands() =
 
           match result with
           | Ok _ ->
-            let! _ = ctx.RespondAsync($"ワードを登録しました。\n**%s{ctx.Guild.Name}**で`%s{word}`は`%s{replaced}`に置換されます。")
+            do!
+              DiscordEmbedBuilder(Title = "読み上げ辞書")
+                .AddField("単語", word, true)
+                .AddField("置換後", replaced, true)
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
+
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
   [<Command("dict-delete");
-    Description("読み上げ時に置換されるワードを削除します。");
+    Description("読み上げ時に置換される単語を削除します。");
     Aliases([| "dd" |]);
     RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.DeleteWord(ctx: CommandContext, [<Description("対象のワード")>] word: string) =
+  member this.DeleteWord(ctx: CommandContext, [<Description("対象の単語")>] word: string) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
@@ -278,15 +308,20 @@ type WDCommands() =
 
           match deleted with
           | Ok true ->
-            let! _ = ctx.RespondAsync($"`%s{word}`を**%s{ctx.Guild.Name}**の辞書から削除しました。")
+            do!
+              DiscordEmbedBuilder(Description = $"`%s{word}`を辞書から削除しました。")
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
+
             return Ok()
-          | Ok _ -> return Error($"`%s{word}`は**%s{ctx.Guild.Name}**の辞書に登録されていません。")
+          | Ok _ -> return Error($"`%s{word}`は辞書に登録されていません。")
           | Error _ -> return Error "処理に失敗しました。"
         }
       )
 
   [<Command("dict-clear");
-    Description("読み上げ時に置換されるワードをすべて削除します。");
+    Description("読み上げ時に置換される単語をすべて削除します。");
     RequireGuild;
     RequireBotPermissions(Permissions.SendMessages)>]
   member this.ClearWords(ctx: CommandContext) =
@@ -300,7 +335,12 @@ type WDCommands() =
 
           match deletedCount with
           | Ok deletedCount ->
-            let! _ = ctx.RespondAsync($"%d{deletedCount}件のワードを**%s{ctx.Guild.Name}**の辞書から削除しました。")
+            do!
+              DiscordEmbedBuilder(Description = $"%d{deletedCount}件の単語を辞書から削除しました。")
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
+
             return Ok()
           | Error _ -> return Error "処理に失敗しました。"
         }
@@ -322,33 +362,52 @@ type WDCommands() =
         task {
           do! ctx.TriggerTypingAsync()
 
-          let joinedText = text |> String.concat " "
+          if
+            Utils.Language.tryFindCode (target)
+            |> Option.isNone
+          then
+            let prefix = this.GetPrefix(ctx)
 
-          let! (name, url) =
-            task {
-              if isNull ctx.Guild then
-                return (ctx.User.Username, ctx.User.AvatarUrl)
-              else
-                let! author = this.TextConverter.GetUserWithValidName(ctx.Guild, ctx.Member.Id)
-                return (author.name, ctx.Member.AvatarUrl)
-            }
-
-          let! translated = this.LanguageTranslator.Translate(joinedText, "", target)
-
-          match translated with
-          | Ok translatedText ->
-            let embed =
-              DiscordEmbedBuilder(
-                Author = DiscordEmbedBuilder.EmbedAuthor(Name = name, IconUrl = url),
-                Description = translatedText
-              )
+            do!
+              DiscordEmbedBuilder(Description = $"無効な言語コードです。Invalid language code.\n", Color = Utils.errorColor)
+                .AddField("To Japanese", $"`%s{prefix} t ja <...>`", false)
+                .AddField("To English", $"`%s{prefix} t en <...>`", false)
+                .AddField("To Korean", $"`%s{prefix} t ko <...>`", false)
+                .AddField("More languages", "https://cloud.google.com/translate/docs/languages", false)
                 .Build()
+              |> ctx.RespondAsync
+              :> Task
 
-            do! ctx.RespondAsync(embed) :> Task
             return Ok()
-          | Error errorMessage ->
-            Utils.logfn "Failed to run command 'translate' with message '%s'" errorMessage
-            return Error "処理に失敗しました。"
+          else
+
+            let joinedText = text |> String.concat " "
+
+            let! (name, url) =
+              task {
+                if isNull ctx.Guild then
+                  return (ctx.User.Username, ctx.User.AvatarUrl)
+                else
+                  let! author = this.TextConverter.GetUserWithValidName(ctx.Guild, ctx.Member.Id)
+                  return (author.name, ctx.Member.AvatarUrl)
+              }
+
+            let! translated = this.LanguageTranslator.Translate(joinedText, "", target)
+
+            match translated with
+            | Ok translatedText ->
+              let embed =
+                DiscordEmbedBuilder(
+                  Author = DiscordEmbedBuilder.EmbedAuthor(Name = name, IconUrl = url),
+                  Description = translatedText
+                )
+                  .Build()
+
+              do! ctx.RespondAsync(embed) :> Task
+              return Ok()
+            | Error errorMessage ->
+              Utils.logfn "Failed to run command 'translate' with message '%s'" errorMessage
+              return Error "処理に失敗しました。"
         }
       )
 
@@ -366,7 +425,11 @@ type WDCommands() =
             this.InstantFields.Leaved(voiceChannel.GuildId.Value)
             Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
 
-            let! _ = channel.SendMessageAsync($"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
+            do!
+              DiscordEmbedBuilder(Description = $"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
+              |> channel.SendMessageAsync
+              :> Task
+
             ()
         }
         :> Task
@@ -415,17 +478,23 @@ type WDCommands() =
               Utils.logfn "Connecting to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
 
               let! conn = voiceNext.ConnectAsync(voiceChannel)
+
               Utils.logfn "Connected to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
+
               this.InstantFields.Joined(ctx.Guild.Id, ctx.Channel.Id)
 
               conn.add_UserLeft (this.OnUserLeft ctx.Channel)
 
               let _ = conn.SendSpeakingAsync(false)
 
-              let! _ =
-                ctx.RespondAsync(
-                  $"ボイスチャンネル <#%d{voiceChannel.Id}> に接続しました。\nテキストチャンネル <#%d{ctx.Channel.Id}> に投稿されたメッセージが読み上げられます。"
-                )
+              let embed =
+                DiscordEmbedBuilder(Title = "読み上げ開始")
+                  .AddField("ボイスチャンネル", $"<#%d{voiceChannel.Id}>", false)
+                  .AddField("テキストチャンネル", $"<#%d{ctx.Channel.Id}>", false)
+                  .AddField("読み上げ終了", $"`%s{this.GetPrefix(ctx)} leave`", false)
+                  .Build()
+
+              do! ctx.RespondAsync(embed) :> Task
 
               return Ok()
         }
@@ -437,8 +506,6 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
-          do! ctx.TriggerTypingAsync()
-
           let voiceNext = ctx.Client.GetVoiceNext()
 
           if isNull voiceNext then
@@ -449,13 +516,10 @@ type WDCommands() =
             if isNull conn then
               return Error "ボイスチャンネルに接続していません。"
             else
-              let channelId = conn.TargetChannel.Id
               conn.Disconnect()
               this.InstantFields.Leaved(ctx.Guild.Id)
               Utils.logfn "Disconnected at '%s'" ctx.Guild.Name
 
-
-              let! _ = ctx.RespondAsync($"ボイスチャンネル <#%d{channelId}> から切断しました。")
               return Ok()
         }
       )
@@ -466,13 +530,19 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
+          do! ctx.TriggerTypingAsync()
+
           let clientId = ctx.Client.CurrentUser.Id
           let permissions = 274881072128uL
 
           let url =
             $"https://discord.com/api/oauth2/authorize?client_id=%d{clientId}&permissions=%d{permissions}&scope=bot"
 
-          do! ctx.RespondAsync(url) :> Task
+          do!
+            DiscordEmbedBuilder(Description = url).Build()
+            |> ctx.RespondAsync
+            :> Task
+
           return Ok()
         }
       )
@@ -520,10 +590,20 @@ type WDCommands() =
             |> Seq.tryFind (fun g -> g.Key = guildId)
 
           match guild with
-          | None -> do! ctx.RespondAsync("サーバーが見つかりませんでした。") :> Task
+          | None ->
+            do!
+              DiscordEmbedBuilder(Description = "サーバーが見つかりませんでした。")
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
           | Some g ->
             do! g.Value.LeaveAsync()
-            do! ctx.RespondAsync($"%s{g.Value.Name}から退出しました。") :> Task
+
+            do!
+              DiscordEmbedBuilder(Description = $"%s{g.Value.Name}から退出しました。")
+                .Build()
+              |> ctx.RespondAsync
+              :> Task
 
           return Ok()
         }
