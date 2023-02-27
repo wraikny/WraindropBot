@@ -314,7 +314,8 @@ type WDCommands() =
     (
       ctx: CommandContext,
       [<Description("翻訳先の言語コード")>] target: string,
-      [<Description("翻訳する文章")>] text: string
+      [<ParamArray>]
+      [<Description("翻訳する文章")>] text: string[]
     ) =
     Utils.handleError
       ctx.RespondAsync
@@ -322,7 +323,9 @@ type WDCommands() =
         task {
           do! ctx.TriggerTypingAsync()
 
-          let! translated = this.LanguageTranslator.Translate(text, "", target)
+          let joinedText = text |> String.concat " "
+
+          let! translated = this.LanguageTranslator.Translate(joinedText, "", target)
 
           match translated with
           | Ok traslatedText ->
