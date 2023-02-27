@@ -11,14 +11,11 @@ type LanguageDetector() =
 
   let path =
     let path = "LanguageModels/Core14.profile.xml"
+
     if File.Exists(path) then
       path
     else
-      Path.Combine(
-        Assembly.GetExecutingAssembly().Location,
-        "..",
-        path
-      )
+      Path.Combine(Assembly.GetExecutingAssembly().Location, "..", path)
 
   do
     if File.Exists(path) |> not then
@@ -26,13 +23,13 @@ type LanguageDetector() =
 
   let identifier = factory.Load(path)
 
-  member _.Detect(text: string): string option =
+  member _.Detect(text: string) : string option =
     try
       identifier.Identify(text)
       |> Seq.tryHead
       |> Option.map (fun (lang, _) -> lang.Iso639_3)
-    with e ->
-      None
+    with
+    | e -> None
 
-  member this.DetectIsJapanese(text: string): bool =
+  member this.DetectIsJapanese(text: string) : bool =
     this.Detect(text) |> Option.is ((=) "jpn")

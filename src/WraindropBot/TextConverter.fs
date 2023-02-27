@@ -44,9 +44,7 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
 
       let msgBuilder = StringBuilder()
 
-      msgBuilder
-        .Append(msg)
-      |> ignore
+      msgBuilder.Append(msg) |> ignore
 
       msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "URL")
       |> ignore
@@ -78,7 +76,7 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         .Replace("\r\n", ". ")
         .Replace("\n", ". ")
         .Replace("\r", ". ")
-        |> ignore
+      |> ignore
 
       for ignoredString in wdConfig.ignoredStrings do
         msgBuilder.Replace(ignoredString, "") |> ignore
@@ -87,18 +85,26 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
 
       let mutable textToSpeak = convertedText
 
-      let languageDetector = this.ServiceProvider.GetService<LanguageDetector>()
-      let languageTranslator = this.ServiceProvider.GetService<LanguageTranslator>()
+      let languageDetector =
+        this.ServiceProvider.GetService<LanguageDetector>()
 
-      if not <| languageDetector.DetectIsJapanese(convertedText) then
+      let languageTranslator =
+        this.ServiceProvider.GetService<LanguageTranslator>()
+
+      if
+        not
+        <| languageDetector.DetectIsJapanese(convertedText)
+      then
         let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
+
         match translationResult with
         | Error errorMsg -> Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
         | Ok translatedText -> textToSpeak <- translatedText
 
       let omittedText =
         if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
-          textToSpeak.Substring(0, wdConfig.speechMaxStringLength) + ", 省略"
+          textToSpeak.Substring(0, wdConfig.speechMaxStringLength)
+          + ", 省略"
         else
           textToSpeak
 

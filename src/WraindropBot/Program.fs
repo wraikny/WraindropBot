@@ -69,7 +69,7 @@ module Program =
               .AddSingleton<LanguageDetector>(languageDetector)
               .AddSingleton<LanguageTranslator>(languadeTranslator)
               .BuildServiceProvider()
-          
+
           textConverter.ServiceProvider <- services
 
           let commandsConfig =

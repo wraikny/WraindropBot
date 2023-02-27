@@ -309,7 +309,12 @@ type WDCommands() =
   [<Command("translate");
     Description("文章を翻訳します。\n言語コード: https://cloud.google.com/translate/docs/languages");
     RequireBotPermissions(Permissions.SendMessages)>]
-  member this.Translate(ctx: CommandContext, [<Description("翻訳先の言語コード")>]target: string, [<Description("翻訳する文章")>]text: string) =
+  member this.Translate
+    (
+      ctx: CommandContext,
+      [<Description("翻訳先の言語コード")>] target: string,
+      [<Description("翻訳する文章")>] text: string
+    ) =
     Utils.handleError
       ctx.RespondAsync
       (fun () ->
