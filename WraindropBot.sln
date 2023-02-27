@@ -1,0 +1,27 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{B6531CB3-7868-4FE4-9462-6BA52A8004F3}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "WraindropBot", "src\WraindropBot\WraindropBot.fsproj", "{32EB0131-3D8F-480A-8487-B2EE957E8AC6}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{32EB0131-3D8F-480A-8487-B2EE957E8AC6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{32EB0131-3D8F-480A-8487-B2EE957E8AC6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{32EB0131-3D8F-480A-8487-B2EE957E8AC6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{32EB0131-3D8F-480A-8487-B2EE957E8AC6}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{32EB0131-3D8F-480A-8487-B2EE957E8AC6} = {B6531CB3-7868-4FE4-9462-6BA52A8004F3}
+	EndGlobalSection
+EndGlobal

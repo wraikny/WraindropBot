@@ -30,7 +30,9 @@ type WDConfig =
     [<JsonField("defaultSpeed")>]
     defaultSpeed: int
     [<JsonField("ignoredStrings")>]
-    ignoredStrings: string [] }
+    ignoredStrings: string []
+    [<JsonField("translationUrl")>]
+    translationUrl: string }
 
 
 [<RequireQualifiedAccess>]

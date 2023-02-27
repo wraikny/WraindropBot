@@ -55,6 +55,10 @@ module Program =
           let textConverter =
             TextConverter(wdConfig, discordCache, dbHandler)
 
+          let languageDetector = LanguageDetector()
+
+          let languadeTranslator = LanguageTranslator(wdConfig)
+
           let services =
             ServiceCollection()
               .AddSingleton<WDConfig>(wdConfig)
@@ -62,7 +66,11 @@ module Program =
               .AddSingleton<Database.DatabaseHandler>(dbHandler)
               .AddSingleton<DiscordCache>(discordCache)
               .AddSingleton<TextConverter>(textConverter)
+              .AddSingleton<LanguageDetector>(languageDetector)
+              .AddSingleton<LanguageTranslator>(languadeTranslator)
               .BuildServiceProvider()
+          
+          textConverter.ServiceProvider <- services
 
           let commandsConfig =
             CommandsNextConfiguration(

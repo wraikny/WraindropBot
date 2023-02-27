@@ -12,11 +12,19 @@
     <Compile Include="Database.fs" />
     <Compile Include="InstantFields.fs" />
     <Compile Include="DiscordCache.fs" />
+    <Compile Include="LanguageDetector.fs" />
+    <Compile Include="LanguageTranslator.fs" />
     <Compile Include="TextConverter.fs" />
     <Compile Include="VoiceHandler.fs" />
     <Compile Include="WDCommands.fs" />
     <Compile Include="WDHelpFormatter.fs" />
     <Compile Include="Program.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="../../lib/ntextcat/src/LanguageModels/Core14.profile.xml" LinkBase="LanguageModels" Visible="false">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +34,11 @@
     <PackageReference Include="DSharpPlus.VoiceNext" Version="4.3.0" />
     <PackageReference Include="FSharp.Json" Version="0.4.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.1" />
+    <PackageReference Include="NTextCat" Version="0.3.65" />
     <PackageReference Include="System.Speech" Version="6.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\lib\ntextcat\src\NTextCat\NTextCat.csproj" />
   </ItemGroup>
 </Project>
