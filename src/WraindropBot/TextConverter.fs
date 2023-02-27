@@ -88,7 +88,10 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
 
       let! textToSpeak =
         task {
-          if languageDetector.DetectIsJapanese(convertedText) then
+          if
+            convertedText.Trim() = ""
+            || languageDetector.DetectIsJapanese(convertedText)
+          then
             return convertedText
           else
             do! args.Channel.TriggerTypingAsync()
@@ -97,7 +100,7 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
             match translationResult with
             | Error errorMsg ->
               Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
-              do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
+              // do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
               return convertedText
             | Ok translatedText ->
               let embed =
