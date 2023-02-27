@@ -42,46 +42,43 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
         |> Seq.map (fun u -> this.GetUserWithValidName(args.Guild, u.Id))
         |> Seq.toArray
 
-      let msgBuilder = StringBuilder()
+      let! convertedText =
+        task {
+          let msgBuilder = StringBuilder()
 
-      msgBuilder.Append(msg) |> ignore
+          msgBuilder.Append(msg) |> ignore
 
-      msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "ゆーあーるえる")
-      |> ignore
+          msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "")
+          |> ignore
 
-      let! words = dbHandler.GetWords(args.Guild.Id)
+          let! words = dbHandler.GetWords(args.Guild.Id)
 
-      match words with
-      | Error _e -> ()
-      | Ok words ->
-        for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
-          for w in words do
-            msgBuilder.Replace(w.word, w.replaced) |> ignore
+          match words with
+          | Error _e -> ()
+          | Ok words ->
+            for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
+              for w in words do
+                msgBuilder.Replace(w.word, w.replaced) |> ignore
 
-      for role in args.MentionedRoles do
-        msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
-        |> ignore
+          for role in args.MentionedRoles do
+            msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
+            |> ignore
 
-      for ch in args.MentionedChannels do
-        msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
-        |> ignore
+          for ch in args.MentionedChannels do
+            msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
+            |> ignore
 
-      let! users = Task.WhenAll(dbUsers)
+          let! users = Task.WhenAll(dbUsers)
 
-      for user in users do
-        msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
-        |> ignore
+          for user in users do
+            msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
+            |> ignore
 
-      msgBuilder
-        .Replace("\r\n", ". ")
-        .Replace("\n", ". ")
-        .Replace("\r", ". ")
-      |> ignore
+          for ignoredString in wdConfig.ignoredStrings do
+            msgBuilder.Replace(ignoredString, "") |> ignore
 
-      for ignoredString in wdConfig.ignoredStrings do
-        msgBuilder.Replace(ignoredString, "") |> ignore
-
-      let convertedText = msgBuilder.ToString()
+          return msgBuilder.ToString()
+        }
 
       let languageDetector =
         this.ServiceProvider.GetService<LanguageDetector>()
@@ -103,18 +100,36 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
               do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
               return convertedText
             | Ok translatedText ->
-              if translatedText.Length > wdConfig.speechMaxStringLength + 1 then
-                do! args.Message.RespondAsync($"全文:\n > %s{translatedText}") :> Task
+              let embed =
+                DiscordEmbedBuilder(
+                  Author = DiscordEmbedBuilder.EmbedAuthor(IconUrl = args.Author.AvatarUrl, Name = author.name),
+                  Description = translatedText
+                )
+                  .Build()
+
+              do! args.Message.RespondAsync(embed) :> Task
 
               return translatedText
         }
 
-      let omittedText =
-        if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
-          textToSpeak.Substring(0, wdConfig.speechMaxStringLength)
-          + ", 省略"
-        else
-          textToSpeak
+      let textBuilder = StringBuilder()
 
-      return sprintf "%s, %s" author.name omittedText
+      textBuilder.Append(author.name).Append(", ")
+      |> ignore
+
+      if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
+        textBuilder
+          .Append(textToSpeak.Substring(0, wdConfig.speechMaxStringLength))
+          .Append(", 省略")
+        |> ignore
+      else
+        textBuilder.Append(textToSpeak) |> ignore
+
+      textBuilder
+        .Replace("\r\n", ". ")
+        .Replace("\n", ". ")
+        .Replace("\r", ". ")
+      |> ignore
+
+      return textBuilder.ToString()
     }

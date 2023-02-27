@@ -324,11 +324,27 @@ type WDCommands() =
 
           let joinedText = text |> String.concat " "
 
+          let! (name, url) =
+            task {
+              if isNull ctx.Guild then
+                return (ctx.User.Username, ctx.User.AvatarUrl)
+              else
+                let! author = this.TextConverter.GetUserWithValidName(ctx.Guild, ctx.Member.Id)
+                return (author.name, ctx.Member.AvatarUrl)
+            }
+
           let! translated = this.LanguageTranslator.Translate(joinedText, "", target)
 
           match translated with
-          | Ok traslatedText ->
-            let! _ = ctx.RespondAsync(traslatedText)
+          | Ok translatedText ->
+            let embed =
+              DiscordEmbedBuilder(
+                Author = DiscordEmbedBuilder.EmbedAuthor(Name = name, IconUrl = url),
+                Description = translatedText
+              )
+                .Build()
+
+            do! ctx.RespondAsync(embed) :> Task
             return Ok()
           | Error errorMessage ->
             Utils.logfn "Failed to run command 'translate' with message '%s'" errorMessage
@@ -478,14 +494,14 @@ type WDCommands() =
                 else
                   ":mute:"
 
-              $"%s{emoji} %s{g.Value.Name}: %d{g.Key}"
+              $"%s{emoji} %s{g.Value.Name}: `%d{g.Key}`"
             )
             |> Seq.toArray
             |> String.concat "\n"
 
           let embed =
-            DiscordEmbedBuilder(Title = "Status")
-              .AddField("サーバー一覧", guilds, false)
+            DiscordEmbedBuilder()
+              .AddField("サーバーリスト", guilds, false)
               .Build()
 
           do! ctx.RespondAsync(embed) :> Task
