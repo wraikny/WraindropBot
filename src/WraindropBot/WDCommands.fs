@@ -314,8 +314,7 @@ type WDCommands() =
     (
       ctx: CommandContext,
       [<Description("翻訳先の言語コード")>] target: string,
-      [<ParamArray>]
-      [<Description("翻訳する文章")>] text: string[]
+      [<ParamArray; Description("翻訳する文章")>] text: string []
     ) =
     Utils.handleError
       ctx.RespondAsync
