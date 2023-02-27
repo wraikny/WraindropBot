@@ -89,25 +89,25 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
       let languageTranslator =
         this.ServiceProvider.GetService<LanguageTranslator>()
 
-      let! textToSpeak = task {
-        if
-          languageDetector.DetectIsJapanese(convertedText)
-        then
-          return convertedText
-        else
-          do! args.Channel.TriggerTypingAsync()
-          let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
-
-          match translationResult with
-          | Error errorMsg ->
-            Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
-            do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
+      let! textToSpeak =
+        task {
+          if languageDetector.DetectIsJapanese(convertedText) then
             return convertedText
-          | Ok translatedText ->
-            if translatedText.Length > wdConfig.speechMaxStringLength + 1 then
-              do! args.Message.RespondAsync($"全文:\n > %s{translatedText}") :> Task
-            return translatedText
-      }
+          else
+            do! args.Channel.TriggerTypingAsync()
+            let! translationResult = languageTranslator.TranslateToJapanese(convertedText)
+
+            match translationResult with
+            | Error errorMsg ->
+              Utils.logfn "Failed to translate '%s' because %s" convertedText errorMsg
+              do! args.Message.RespondAsync("翻訳に失敗しました。") :> Task
+              return convertedText
+            | Ok translatedText ->
+              if translatedText.Length > wdConfig.speechMaxStringLength + 1 then
+                do! args.Message.RespondAsync($"全文:\n > %s{translatedText}") :> Task
+
+              return translatedText
+        }
 
       let omittedText =
         if textToSpeak.Length > wdConfig.speechMaxStringLength + 1 then
