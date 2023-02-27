@@ -1,6 +1,24 @@
 # 使い方 - Wraindrop Bot
 
-`<prefix>`は`!wd`等の設定したプレフィックスに読み替えてください。
+`!wd`は指定したprefixに読み替えてください。
+
+- [使い方 - Wraindrop Bot](#使い方---wraindrop-bot)
+  - [Commands](#commands)
+    - [join](#join)
+    - [leave](#leave)
+    - [name-get](#name-get)
+    - [name-set](#name-set)
+    - [name-set-user](#name-set-user)
+    - [name-delete](#name-delete)
+    - [name-delete-user](#name-delete-user)
+    - [speed-get](#speed-get)
+    - [speed-set](#speed-set)
+    - [dict-list](#dict-list)
+    - [dict-get](#dict-get)
+    - [dict-set](#dict-set)
+    - [dict-delete](#dict-delete)
+    - [dict-clear](#dict-clear)
+    - [translate](#translate)
 
 ## Commands
 
@@ -10,7 +28,7 @@
 このコマンドを実行したテキストチャンネルに投稿された文章が自動で読み上げられます。
 
 ```
-<prefix> join
+!wd join
 ```
 
 エイリアス
@@ -21,7 +39,7 @@
 ボイスチャンネルから切断します。
 
 ```
-<prefix> leave
+!wd leave
 ```
 
 エイリアス
@@ -32,7 +50,7 @@
 サーバーで読み上げる名前を取得します。
 
 ```
-<prefix> name-get
+!wd name-get
 ```
 
 エイリアス
@@ -43,7 +61,7 @@
 サーバーで読み上げる名前を設定します。
 
 ```
-<prefix> name-set <読み上げる名前>
+!wd name-set <読み上げる名前>
 ```
 
 エイリアス
@@ -54,7 +72,7 @@
 サーバーで指定したユーザを読み上げる名前を設定します。
 
 ```
-<prefix> name-set-user <@対象のユーザ> <読み上げる名前>
+!wd name-set-user <@対象のユーザ> <読み上げる名前>
 ```
 
 エイリアス
@@ -65,7 +83,7 @@
 サーバーで読み上げる名前を消去します。
 
 ```
-<prefix> name-delete
+!wd name-delete
 ```
 
 エイリアス
@@ -76,7 +94,7 @@
 サーバーで指定したユーザを読み上げる名前を消去します。
 
 ```
-<prefix> name-delete-user <@対象のユーザ>
+!wd name-delete-user <@対象のユーザ>
 ```
 
 エイリアス
@@ -87,7 +105,7 @@
 サーバーでの発話速度を取得します。
 
 ```
-<prefix> speed-get
+!wd speed-get
 ```
 
 エイリアス
@@ -98,7 +116,7 @@
 サーバーでの発話速度を設定します。(50~300)
 
 ```
-<prefix> speed-set <発話速度>
+!wd speed-set <発話速度>
 ```
 
 エイリアス
@@ -109,7 +127,7 @@
 読み上げ時に置換されるワードの一覧を取得します。
 
 ```
-<prefix> dict-list
+!wd dict-list
 ```
 
 エイリアス
@@ -120,7 +138,7 @@
 読み上げ時に置換されるワードを取得します。
 
 ```
-<prefix> dict-get <対象のワード>
+!wd dict-get <対象のワード>
 ```
 
 エイリアス
@@ -131,7 +149,7 @@
 読み上げ時に置換されるワードを追加・更新します。
 
 ```
-<prefix> dict-set <対象のワード> <置換するワード>
+!wd dict-set <対象のワード> <置換するワード>
 ```
 
 エイリアス
@@ -142,7 +160,7 @@
 読み上げ時に置換されるワードを削除します。
 
 ```
-<prefix> dict-delete <対象のワード>
+!wd dict-delete <対象のワード>
 ```
 
 エイリアス
@@ -153,7 +171,20 @@
 読み上げ時に置換されるワードをすべて削除します。
 
 ```
-<prefix> dict-clear
+!wd dict-clear
 ```
 
 エイリアスはありません。
+
+### translate
+
+文章を指定した言語に翻訳（Google翻訳）して返信します。
+
+言語コード: https://cloud.google.com/translate/docs/languages
+
+```
+!wd traslate <言語コード> <文章>
+```
+
+エイリアス
+* `t`
