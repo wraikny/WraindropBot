@@ -46,37 +46,37 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
       let! words = dbHandler.GetWords(args.Guild.Id)
 
       let convertedText =
-          let msgBuilder = StringBuilder()
+        let msgBuilder = StringBuilder()
 
-          msgBuilder.Append(msg) |> ignore
+        msgBuilder.Append(msg) |> ignore
 
-          msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "")
+        msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "")
+        |> ignore
+
+        match words with
+        | Error _e -> ()
+        | Ok words ->
+          for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
+            for w in words do
+              msgBuilder.Replace(w.word, w.replaced) |> ignore
+
+        for role in args.MentionedRoles do
+          msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
           |> ignore
 
-          match words with
-          | Error _e -> ()
-          | Ok words ->
-            for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
-              for w in words do
-                msgBuilder.Replace(w.word, w.replaced) |> ignore
+        for ch in args.MentionedChannels do
+          msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
+          |> ignore
 
-          for role in args.MentionedRoles do
-            msgBuilder.Replace($"<@&%d{role.Id}>", role.Name)
-            |> ignore
+        for user in dbUsers do
+          msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
+          |> ignore
 
-          for ch in args.MentionedChannels do
-            msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
-            |> ignore
+        for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
+          for (o, n) in wdConfig.primitiveDictionary do
+            msgBuilder.Replace(o, n) |> ignore
 
-          for user in dbUsers do
-            msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
-            |> ignore
-          
-          for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
-            for (o, n) in wdConfig.primitiveDictionary do
-              msgBuilder.Replace(o, n) |> ignore
-
-          msgBuilder.ToString()
+        msgBuilder.ToString()
 
       let languageDetector =
         this.ServiceProvider.GetService<LanguageDetector>()
