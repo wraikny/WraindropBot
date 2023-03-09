@@ -37,21 +37,21 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
     task {
       let msg = args.Message.Content
 
-      let dbUsers =
+      let! dbUsers =
         args.MentionedUsers
         |> Seq.map (fun u -> this.GetUserWithValidName(args.Guild, u.Id))
         |> Seq.toArray
+        |> Task.WhenAll
 
-      let! convertedText =
-        task {
+      let! words = dbHandler.GetWords(args.Guild.Id)
+
+      let convertedText =
           let msgBuilder = StringBuilder()
 
           msgBuilder.Append(msg) |> ignore
 
           msgBuilder.Replace(Regex("https?://[\w/:%#\$&\?\(\)~\.=\+\-]+"), "")
           |> ignore
-
-          let! words = dbHandler.GetWords(args.Guild.Id)
 
           match words with
           | Error _e -> ()
@@ -68,17 +68,15 @@ type TextConverter(wdConfig: WDConfig, discordCache: DiscordCache, dbHandler: Da
             msgBuilder.Replace($"<#%d{ch.Id}>", $"#%s{ch.Name}")
             |> ignore
 
-          let! users = Task.WhenAll(dbUsers)
-
-          for user in users do
+          for user in dbUsers do
             msgBuilder.Replace($"<@!%d{user.userId}>", $"@%s{user.name}")
             |> ignore
+          
+          for _ = 1 to wdConfig.dictionaryReplacementRepeatedCount do
+            for (o, n) in wdConfig.primitiveDictionary do
+              msgBuilder.Replace(o, n) |> ignore
 
-          for ignoredString in wdConfig.ignoredStrings do
-            msgBuilder.Replace(ignoredString, "") |> ignore
-
-          return msgBuilder.ToString()
-        }
+          msgBuilder.ToString()
 
       let languageDetector =
         this.ServiceProvider.GetService<LanguageDetector>()

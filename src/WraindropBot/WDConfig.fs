@@ -29,8 +29,8 @@ type WDConfig =
     volume: int
     [<JsonField("defaultSpeed")>]
     defaultSpeed: int
-    [<JsonField("ignoredStrings")>]
-    ignoredStrings: string []
+    [<JsonField("primitiveDictionary")>]
+    primitiveDictionary: (string * string) []
     [<JsonField("translationUrl")>]
     translationUrl: string }
 

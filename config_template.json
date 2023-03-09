@@ -11,8 +11,17 @@
     "speechMaxStringLength": 50,
     "volume": 60,
     "defaultSpeed": 100,
-    "ignoredStrings": [
-        "～"
+    "primitiveDictionary": [
+        ["～", "."],
+        ["ー", "."],
+        ["！", "."],
+        ["？", "."],
+        ["!", "."],
+        ["?", "."],
+        [".....", "."],
+        ["....", "."],
+        ["...", "."],
+        ["..", "."]
     ],
     "translationUrl": ""
 }
