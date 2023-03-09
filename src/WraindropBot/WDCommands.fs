@@ -7,6 +7,8 @@ open System.Threading
 open System.Threading.Tasks
 open System.ComponentModel
 open System.Runtime.CompilerServices
+open System.Collections.Concurrent
+open System.Collections.Generic
 
 
 open DSharpPlus
@@ -411,16 +413,24 @@ type WDCommands() =
         }
       )
 
-  member this.OnUserLeft (channel: DiscordChannel) (conn: VoiceNextConnection) (_args: VoiceUserLeaveEventArgs) =
+  member this.OnUserJoined (users: ConcurrentDictionary<uint64, bool>) (_conn: VoiceNextConnection) (args: VoiceUserJoinEventArgs) =
+    let _ =
+      Task.Run(fun () ->
+        let leftUser = args.User
+        do users.TryAdd(leftUser.Id, leftUser.IsBot) |> ignore
+      )
+    Task.CompletedTask
+
+  member this.OnUserLeft (users: ConcurrentDictionary<uint64, bool>) (channel: DiscordChannel) (conn: VoiceNextConnection) (args: VoiceUserLeaveEventArgs) =
     let _ =
       Task.Run(fun () ->
         task {
           let voiceChannel = conn.TargetChannel
-          let users = voiceChannel.Users |> Seq.toArray
-          Utils.logfn "%A" users
-          Utils.logfn "%A" (users |> Seq.map (fun u -> u.IsCurrent || u.IsBot))
+          let leftUser = args.User
 
-          if users |> Seq.forall (fun u -> u.IsBot) then
+          do users.TryRemove(leftUser.Id) |> ignore
+
+          if users |> Seq.forall (fun kvp -> kvp.Value) then
             conn.Disconnect()
             this.InstantFields.Leaved(voiceChannel.GuildId.Value)
             Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
@@ -482,8 +492,15 @@ type WDCommands() =
               Utils.logfn "Connected to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
 
               this.InstantFields.Joined(ctx.Guild.Id, ctx.Channel.Id)
-
-              conn.add_UserLeft (this.OnUserLeft ctx.Channel)
+              
+              let users = ConcurrentDictionary(
+                voiceChannel.Users
+                |> Seq.map (fun user ->
+                  KeyValuePair(user.Id, user.IsBot)
+                )
+              )
+              conn.add_UserJoined (this.OnUserJoined users)
+              conn.add_UserLeft (this.OnUserLeft users ctx.Channel)
 
               let _ = conn.SendSpeakingAsync(false)
 
