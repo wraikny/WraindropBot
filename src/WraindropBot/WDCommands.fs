@@ -638,3 +638,8 @@ type WDCommands() =
           return Ok()
         }
       )
+
+  [<Command("shutdown"); RequireOwner; RequireDirectMessage>]
+  member this.Shutdown(_: CommandContext) =
+    Environment.Exit(1) |> ignore
+    Task.CompletedTask
