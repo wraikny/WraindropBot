@@ -413,47 +413,22 @@ type WDCommands() =
         }
       )
 
-  member this.OnUserJoined
-    (users: ConcurrentDictionary<uint64, bool>)
-    (_conn: VoiceNextConnection)
-    (args: VoiceUserJoinEventArgs)
-    =
-    let _ =
-      Task.Run(fun () ->
-        let leftUser = args.User
-
-        do
-          users.TryAdd(leftUser.Id, leftUser.IsBot)
-          |> ignore
-      )
-
-    Task.CompletedTask
-
   member this.OnUserLeft
-    (users: ConcurrentDictionary<uint64, bool>)
-    (channel: DiscordChannel)
     (conn: VoiceNextConnection)
-    (args: VoiceUserLeaveEventArgs)
+    (_args: VoiceUserLeaveEventArgs)
     =
     let _ =
       Task.Run(fun () ->
         task {
           let voiceChannel = conn.TargetChannel
-          let leftUser = args.User
 
-          do users.TryRemove(leftUser.Id) |> ignore
-
-          if users |> Seq.forall (fun kvp -> kvp.Value) then
-            conn.Disconnect()
-            this.InstantFields.Leaved(voiceChannel.GuildId.Value)
+          if
+            conn.TargetChannel.Users
+            |> Seq.forall (fun u -> u.IsBot)
+          then
+            conn.Disconnect ()
+            this.InstantFields.Left(voiceChannel.GuildId.Value)
             Utils.logfn "Disconnected at '%s'" voiceChannel.Guild.Name
-
-            do!
-              DiscordEmbedBuilder(Description = $"ボイスチャンネル <#%d{channel.Id}> から切断しました。")
-              |> channel.SendMessageAsync
-              :> Task
-
-            ()
         }
         :> Task
       )
@@ -472,8 +447,6 @@ type WDCommands() =
       ctx.RespondAsync
       (fun () ->
         task {
-          do! ctx.TriggerTypingAsync()
-
           let voiceNext = ctx.Client.GetVoiceNext()
 
           if isNull voiceNext then
@@ -496,7 +469,7 @@ type WDCommands() =
 
               if currentConn <> null then
                 currentConn.Disconnect()
-                this.InstantFields.Leaved(ctx.Guild.Id)
+                this.InstantFields.Left(ctx.Guild.Id)
 
               Utils.logfn "Connecting to '#%s' at '%s'" voiceChannel.Name ctx.Guild.Name
 
@@ -506,14 +479,7 @@ type WDCommands() =
 
               this.InstantFields.Joined(ctx.Guild.Id, ctx.Channel.Id)
 
-              let users =
-                ConcurrentDictionary(
-                  voiceChannel.Users
-                  |> Seq.map (fun user -> KeyValuePair(user.Id, user.IsBot))
-                )
-
-              conn.add_UserJoined (this.OnUserJoined users)
-              conn.add_UserLeft (this.OnUserLeft users ctx.Channel)
+              conn.add_UserLeft (this.OnUserLeft)
 
               let _ = conn.SendSpeakingAsync(false)
 
@@ -523,7 +489,7 @@ type WDCommands() =
                   .AddField("テキストチャンネル", $"<#%d{ctx.Channel.Id}>", false)
                   .AddField("読み上げ終了", $"`%s{this.GetPrefix(ctx)} leave`", false)
                   .Build()
-
+              do! ctx.TriggerTypingAsync()
               do! ctx.RespondAsync(embed) :> Task
 
               return Ok()
@@ -547,7 +513,7 @@ type WDCommands() =
               return Error "ボイスチャンネルに接続していません。"
             else
               conn.Disconnect()
-              this.InstantFields.Leaved(ctx.Guild.Id)
+              this.InstantFields.Left(ctx.Guild.Id)
               Utils.logfn "Disconnected at '%s'" ctx.Guild.Name
 
               return Ok()

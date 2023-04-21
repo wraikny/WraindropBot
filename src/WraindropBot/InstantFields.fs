@@ -17,5 +17,5 @@ type InstantFields() =
   member _.Joined(guildId, channelId) =
     lock channelDict (fun () -> channelDict.[guildId] <- channelId)
 
-  member _.Leaved(guildId) =
+  member _.Left(guildId) =
     lock channelDict (fun () -> channelDict.Remove(guildId) |> ignore)
