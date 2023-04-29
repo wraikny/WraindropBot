@@ -413,6 +413,33 @@ type WDCommands() =
         }
       )
 
+  [<Command("ja");
+    Description("文章を日本語に翻訳します。");
+    RequireBotPermissions(Permissions.SendMessages)>]
+  member this.TranslateToJapanese
+    (
+      ctx: CommandContext,
+      [<ParamArray; Description("翻訳する文章")>] text: string []
+    ) = this.Translate(ctx, "ja", text)
+
+  [<Command("en");
+    Description("文章を英語に翻訳します。");
+    RequireBotPermissions(Permissions.SendMessages)>]
+  member this.TranslateToEnglish
+    (
+      ctx: CommandContext,
+      [<ParamArray; Description("翻訳する文章")>] text: string []
+    ) = this.Translate(ctx, "en", text)
+
+  [<Command("ko");
+    Description("文章を韓国語に翻訳します。");
+    RequireBotPermissions(Permissions.SendMessages)>]
+  member this.TranslateToKorean
+    (
+      ctx: CommandContext,
+      [<ParamArray; Description("翻訳する文章")>] text: string []
+    ) = this.Translate(ctx, "ko", text)
+
   member this.OnUserLeft
     (conn: VoiceNextConnection)
     (_args: VoiceUserLeaveEventArgs)
